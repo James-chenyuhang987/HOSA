@@ -24,3 +24,13 @@ npm test
 npm run lint
 npm run build
 ```
+
+## GitHub Pages 部署
+
+合并到 `main` 后，GitHub Actions 会自动构建并发布网站：
+
+<https://james-chenyuhang987.github.io/HOSA/>
+
+首次部署前，请在仓库的 **Settings > Pages > Build and deployment** 中将 **Source**
+设置为 **GitHub Actions**。之后每次推送到 `main` 都会自动更新网页，也可以在
+**Actions > Deploy to GitHub Pages** 中手动运行。
