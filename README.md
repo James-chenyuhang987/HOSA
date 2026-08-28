@@ -1,32 +1,36 @@
-# React + TypeScript + Vite
+# HOSA 就医向导
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+HOSA 是一个面向患者的就医导航原型，帮助用户在就诊前理清挂号科室、院内位置和专科流程。
 
-Currently, two official plugins are available:
+## 当前功能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **智能导诊**：根据用户描述的症状提供初步挂号方向，并对危急症状给出急诊提示。
+- **院内地图**：通过明确标注为演示内容的院区和楼层示意图，展示建筑功能及楼梯、电梯位置。
+- **心血管就医流程**：展示心血管内科、心脏外科和血管外科的一般就医步骤，并预留院方授权实景批注图的位置。
 
-## React Compiler
+> 当前地图和实景图均为产品原型占位，不代表北京大学第三医院的真实布局。就医时请以医院官方信息和现场标识为准。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 本地开发
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 质量检查
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+## GitHub Pages 部署
+
+合并到 `main` 后，GitHub Actions 会自动构建并发布网站：
+
+<https://james-chenyuhang987.github.io/HOSA/>
+
+首次部署前，请在仓库的 **Settings > Pages > Build and deployment** 中将 **Source**
+设置为 **GitHub Actions**。之后每次推送到 `main` 都会自动更新网页，也可以在
+**Actions > Deploy to GitHub Pages** 中手动运行。
