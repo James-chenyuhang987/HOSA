@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 
-type ModuleId = 'guide' | 'map' | 'cardio'
+type ModuleId = 'guide' | 'map' | 'cardio' | 'remote'
 
 type Recommendation = {
   department: string
@@ -127,6 +127,66 @@ const cardioPaths = [
   },
 ]
 
+const onboardingSteps = [
+  {
+    eyebrow: '第一步 · 智能导诊',
+    icon: '01',
+    title: '先确定该挂什么科',
+    description: '用自己的话描述症状，诊途会提供初步挂号方向和就诊前准备建议。',
+    module: 'guide' as ModuleId,
+    action: '试试智能导诊',
+  },
+  {
+    eyebrow: '第二步 · 院内导航',
+    icon: '02',
+    title: '到医院后少走弯路',
+    description: '通过院区与楼层示意，提前了解建筑功能以及楼梯、电梯的位置。',
+    module: 'map' as ModuleId,
+    action: '查看院内地图',
+  },
+  {
+    eyebrow: '第三步 · 全程准备',
+    icon: '03',
+    title: '本地、异地就医都从容',
+    description: '查看专科流程，或生成异地就医准备清单，把关键事项逐一完成。',
+    module: 'remote' as ModuleId,
+    action: '制定异地计划',
+  },
+]
+
+const remoteSteps = [
+  {
+    id: 'appointment',
+    phase: '就医确认',
+    title: '确认医院、科室与号源',
+    detail: '通过医院官方渠道确认院区、出诊时间、预约规则及是否需要转诊材料。',
+  },
+  {
+    id: 'insurance',
+    phase: '医保准备',
+    title: '办理异地就医备案',
+    detail: '出发前通过国家医保服务平台或参保地医保渠道确认备案与报销要求。',
+  },
+  {
+    id: 'records',
+    phase: '资料整理',
+    title: '带齐病历和原始检查资料',
+    detail: '整理身份证件、医保凭证、用药清单、病历，以及影像光盘或原始文件。',
+  },
+  {
+    id: 'travel',
+    phase: '行程安排',
+    title: '规划交通、住宿与陪同',
+    detail: '根据检查时间预留行程，确认无障碍需求，并为可能的复诊留出弹性。',
+  },
+  {
+    id: 'follow-up',
+    phase: '就医之后',
+    title: '保存资料并确认复诊方式',
+    detail: '离院前保存处方、费用票据和检查结果，问清线上或线下复诊安排。',
+  },
+]
+
 function getRecommendation(symptoms: string): Recommendation {
   if (urgentKeywords.some((keyword) => symptoms.includes(keyword))) {
     return {
@@ -158,6 +218,12 @@ function App() {
   const [selectedBuilding, setSelectedBuilding] = useState(campusBuildings[0])
   const [selectedFloor, setSelectedFloor] = useState(floors[0])
   const [selectedPath, setSelectedPath] = useState(cardioPaths[0])
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => window.localStorage.getItem('zhentu-onboarding-complete') !== 'true',
+  )
+  const [onboardingStep, setOnboardingStep] = useState(0)
+  const [destination, setDestination] = useState('北京')
+  const [completedRemoteSteps, setCompletedRemoteSteps] = useState<string[]>([])
 
   const submitSymptoms = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -173,6 +239,32 @@ function App() {
     setRecommendation(getRecommendation(normalizedSymptoms))
   }
 
+  const finishOnboarding = (module?: ModuleId) => {
+    window.localStorage.setItem('zhentu-onboarding-complete', 'true')
+    if (module) {
+      setActiveModule(module)
+    }
+    setShowOnboarding(false)
+  }
+
+  const reopenOnboarding = () => {
+    setOnboardingStep(0)
+    setShowOnboarding(true)
+  }
+
+  const toggleRemoteStep = (stepId: string) => {
+    setCompletedRemoteSteps((current) =>
+      current.includes(stepId)
+        ? current.filter((completedId) => completedId !== stepId)
+        : [...current, stepId],
+    )
+  }
+
+  const remoteProgress = Math.round(
+    (completedRemoteSteps.length / remoteSteps.length) * 100,
+  )
+  const currentOnboarding = onboardingSteps[onboardingStep]
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -181,8 +273,8 @@ function App() {
             +
           </span>
           <span>
-            <strong>HOSA</strong>
-            <small>就医向导</small>
+            <strong>诊途</strong>
+            <small>让就医少走弯路</small>
           </span>
         </button>
         <nav aria-label="主要功能">
@@ -190,6 +282,7 @@ function App() {
             ['guide', '智能导诊'],
             ['map', '院内地图'],
             ['cardio', '就医流程'],
+            ['remote', '异地就医'],
           ].map(([id, label]) => (
             <button
               className={activeModule === id ? 'nav-item active' : 'nav-item'}
@@ -201,7 +294,12 @@ function App() {
             </button>
           ))}
         </nav>
-        <span className="hospital-pill">北京大学第三医院 · 演示</span>
+        <div className="header-tools">
+          <span className="competition-pill">HOSA 参赛作品</span>
+          <button className="guide-trigger" type="button" onClick={reopenOnboarding}>
+            使用引导
+          </button>
+        </div>
       </header>
 
       <main>
@@ -419,12 +517,167 @@ function App() {
             </div>
           </section>
         )}
+
+        {activeModule === 'remote' && (
+          <section className="module remote-module">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">异地就医准备</span>
+                <h1>去外地看病，也能心里有数</h1>
+                <p>选择目的地，按时间顺序整理预约、医保、病历和行程事项。</p>
+              </div>
+              <span className="demo-badge">通用清单 · 具体要求以官方信息为准</span>
+            </div>
+
+            <div className="remote-overview">
+              <div className="destination-card">
+                <label htmlFor="destination">计划前往</label>
+                <select
+                  id="destination"
+                  value={destination}
+                  onChange={(event) => setDestination(event.target.value)}
+                >
+                  {['北京', '上海', '广州', '其他城市'].map((city) => (
+                    <option key={city}>{city}</option>
+                  ))}
+                </select>
+                <div className="destination-route" aria-hidden="true">
+                  <span className="route-origin">我的城市</span>
+                  <i>·········································→</i>
+                  <span className="route-target">{destination}</span>
+                </div>
+                <p>
+                  诊途不会替您选择医院。请优先通过目标医院官网、公众号或官方电话核对信息。
+                </p>
+              </div>
+
+              <aside className="progress-card">
+                <span className="panel-kicker">准备进度</span>
+                <strong>{remoteProgress}%</strong>
+                <div
+                  className="progress-track"
+                  role="progressbar"
+                  aria-label="异地就医准备进度"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={remoteProgress}
+                >
+                  <i style={{ width: `${remoteProgress}%` }} />
+                </div>
+                <p>
+                  已完成 {completedRemoteSteps.length} / {remoteSteps.length} 项
+                </p>
+              </aside>
+            </div>
+
+            <div className="remote-checklist">
+              <div className="checklist-heading">
+                <span className="panel-kicker">{destination}就医准备单</span>
+                <h2>出发前逐项确认</h2>
+              </div>
+              <ol>
+                {remoteSteps.map((step, index) => {
+                  const isComplete = completedRemoteSteps.includes(step.id)
+
+                  return (
+                    <li className={isComplete ? 'complete' : ''} key={step.id}>
+                      <button
+                        type="button"
+                        aria-pressed={isComplete}
+                        onClick={() => toggleRemoteStep(step.id)}
+                      >
+                        <span className="check-control" aria-hidden="true">
+                          {isComplete ? '✓' : String(index + 1).padStart(2, '0')}
+                        </span>
+                        <span className="check-content">
+                          <small>{step.phase}</small>
+                          <strong>{step.title}</strong>
+                          <span>{step.detail}</span>
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ol>
+              <p className="remote-notice">
+                各地医保和医院政策可能调整，清单仅用于准备提醒，不代表医院或医保部门的正式要求。
+              </p>
+            </div>
+          </section>
+        )}
       </main>
 
       <footer>
-        <span>HOSA 就医向导 · 原型演示</span>
+        <span>诊途 · HOSA 参赛作品</span>
         <span>信息仅供就医导航参考，不替代专业医疗意见</span>
       </footer>
+
+      {showOnboarding && (
+        <div className="onboarding-backdrop">
+          <section
+            className="onboarding-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="onboarding-title"
+          >
+            <button
+              className="onboarding-skip"
+              type="button"
+              onClick={() => finishOnboarding()}
+            >
+              跳过引导
+            </button>
+            <div className="onboarding-visual" aria-hidden="true">
+              <span>{currentOnboarding.icon}</span>
+              <i className={`visual-orbit orbit-${onboardingStep + 1}`} />
+              <strong>诊途</strong>
+            </div>
+            <div className="onboarding-copy">
+              <span className="eyebrow">{currentOnboarding.eyebrow}</span>
+              <h2 id="onboarding-title">{currentOnboarding.title}</h2>
+              <p>{currentOnboarding.description}</p>
+              <div className="onboarding-dots" aria-label="引导进度">
+                {onboardingSteps.map((step, index) => (
+                  <span
+                    className={index === onboardingStep ? 'active' : ''}
+                    key={step.title}
+                  />
+                ))}
+              </div>
+              <div className="onboarding-actions">
+                {onboardingStep > 0 && (
+                  <button
+                    className="secondary-action"
+                    type="button"
+                    onClick={() => setOnboardingStep((step) => step - 1)}
+                  >
+                    上一步
+                  </button>
+                )}
+                {onboardingStep < onboardingSteps.length - 1 ? (
+                  <button
+                    className="primary-action"
+                    type="button"
+                    onClick={() => setOnboardingStep((step) => step + 1)}
+                  >
+                    下一步
+                    <span aria-hidden="true">→</span>
+                  </button>
+                ) : (
+                  <button
+                    className="primary-action"
+                    type="button"
+                    onClick={() => finishOnboarding(currentOnboarding.module)}
+                  >
+                    {currentOnboarding.action}
+                    <span aria-hidden="true">→</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
