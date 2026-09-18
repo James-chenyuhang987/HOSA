@@ -1,8 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 
-type ModuleId = 'guide' | 'map' | 'cardio' | 'remote'
+type ModuleId = 'guide' | 'dialect' | 'cardio' | 'remote'
+type DialectId = 'sichuan' | 'cantonese' | 'northeastern' | 'shanghai'
+
+type SpeechRecognitionResultEventLike = Event & {
+  results: {
+    length: number
+    [index: number]: {
+      length: number
+      [index: number]: { transcript: string }
+    }
+  }
+}
+
+type SpeechRecognitionLike = {
+  lang: string
+  interimResults: boolean
+  continuous: boolean
+  onresult: ((event: SpeechRecognitionResultEventLike) => void) | null
+  onerror: ((event: Event) => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor
+    webkitSpeechRecognition?: SpeechRecognitionConstructor
+  }
+}
 
 type Recommendation = {
   department: string
@@ -78,28 +109,73 @@ const urgentKeywords = [
   '偏瘫',
 ]
 
-const campusBuildings = [
-  { id: 'outpatient', label: '门诊楼', detail: '挂号、分诊、专科门诊', className: 'building-a' },
-  { id: 'medical', label: '内科楼', detail: '内科诊疗与住院服务', className: 'building-b' },
-  { id: 'surgical', label: '外科楼', detail: '外科诊疗与住院服务', className: 'building-c' },
-  { id: 'emergency', label: '急诊', detail: '24 小时急诊入口', className: 'building-d' },
-]
-
-const floors = [
+const dialectOptions: Array<{
+  id: DialectId
+  name: string
+  description: string
+  examples: string[]
+  speechLang: string
+  replacements: Array<[string, string]>
+}> = [
   {
-    floor: '1F',
-    spaces: ['门诊大厅', '自助服务区', '药房', '检验服务台'],
-    vertical: ['东侧电梯', '西侧楼梯', '无障碍电梯'],
+    id: 'sichuan',
+    name: '四川话',
+    description: '把常见四川方言词换成普通话，方便向医护人员描述情况。',
+    examples: ['咋个办嘛？', '这个事情好恼火。', '我晓不得痛了好久。'],
+    speechLang: 'zh-CN',
+    replacements: [
+      ['咋个', '怎么'],
+      ['啥子', '什么'],
+      ['晓不得', '不知道'],
+      ['晓得', '知道'],
+      ['恼火', '严重 / 麻烦'],
+      ['巴适', '舒服 / 不错'],
+    ],
   },
   {
-    floor: '2F',
-    spaces: ['心血管内科', '呼吸科', '候诊区', '采血区'],
-    vertical: ['东侧电梯', '中庭扶梯', '西侧楼梯'],
+    id: 'cantonese',
+    name: '粤语',
+    description: '识别常见粤语表达，整理成更容易沟通的普通话说法。',
+    examples: ['我唔舒服。', '边度痛？', '痛咗几耐？'],
+    speechLang: 'zh-HK',
+    replacements: [
+      ['唔舒服', '不舒服'],
+      ['边度', '哪里'],
+      ['几耐', '多久'],
+      ['冇', '没有'],
+      ['痛咗', '疼了'],
+      ['唔', '不'],
+    ],
   },
   {
-    floor: '3F',
-    spaces: ['神经内科', '消化内科', '超声检查', '缴费窗口'],
-    vertical: ['东侧电梯', '中庭扶梯', '西侧楼梯'],
+    id: 'northeastern',
+    name: '东北话',
+    description: '将常见东北方言表达转换为普通话，帮助医患快速理解。',
+    examples: ['这可咋整？', '我老鼻子难受了。', '这感觉挺得劲。'],
+    speechLang: 'zh-CN',
+    replacements: [
+      ['咋整', '怎么办'],
+      ['嘎哈', '做什么'],
+      ['老鼻子', '非常 / 很多'],
+      ['得劲', '舒服'],
+      ['闹心', '难受 / 烦躁'],
+      ['贼', '很 / 非常'],
+    ],
+  },
+  {
+    id: 'shanghai',
+    name: '上海话',
+    description: '整理常见上海方言词句，让就医沟通更清楚。',
+    examples: ['侬哪能不舒服？', '阿拉勿晓得。', '覅紧张。'],
+    speechLang: 'zh-CN',
+    replacements: [
+      ['侬', '你'],
+      ['阿拉', '我们'],
+      ['哪能', '怎么'],
+      ['勿晓得', '不知道'],
+      ['覅', '不要'],
+      ['勿', '不'],
+    ],
   },
 ]
 
@@ -137,12 +213,12 @@ const onboardingSteps = [
     action: '试试智能导诊',
   },
   {
-    eyebrow: '第二步 · 院内导航',
+    eyebrow: '第二步 · 方言翻译',
     icon: '02',
-    title: '到医院后少走弯路',
-    description: '通过院区与楼层示意，提前了解建筑功能以及楼梯、电梯的位置。',
-    module: 'map' as ModuleId,
-    action: '查看院内地图',
+    title: '把方言说法讲清楚',
+    description: '选择熟悉的方言，通过录音或文字输入，将常见表达整理成普通话，帮助您更顺畅地和医护人员沟通。',
+    module: 'dialect' as ModuleId,
+    action: '试试方言翻译',
   },
   {
     eyebrow: '第三步 · 全程准备',
@@ -187,6 +263,22 @@ const remoteSteps = [
   },
 ]
 
+function translateDialect(text: string, dialect: (typeof dialectOptions)[number]): string {
+  const normalizedText = text.trim()
+  if (!normalizedText) {
+    return ''
+  }
+
+  const translatedText = dialect.replacements.reduce(
+    (currentText, [dialectTerm, mandarinTerm]) => currentText.split(dialectTerm).join(mandarinTerm),
+    normalizedText,
+  )
+
+  return translatedText === normalizedText
+    ? '暂未识别出常见方言词，请补充更具体的说法，或直接使用普通话描述。'
+    : translatedText
+}
+
 function getRecommendation(symptoms: string): Recommendation {
   if (urgentKeywords.some((keyword) => symptoms.includes(keyword))) {
     return {
@@ -215,8 +307,17 @@ function App() {
   const [symptoms, setSymptoms] = useState('')
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null)
   const [formError, setFormError] = useState('')
-  const [selectedBuilding, setSelectedBuilding] = useState(campusBuildings[0])
-  const [selectedFloor, setSelectedFloor] = useState(floors[0])
+  const [selectedDialect, setSelectedDialect] = useState(dialectOptions[0])
+  const [dialectText, setDialectText] = useState('')
+  const [translation, setTranslation] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingError, setRecordingError] = useState('')
+  const [recordingUrl, setRecordingUrl] = useState('')
+  const dialectTextRef = useRef('')
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const recordingChunksRef = useRef<Blob[]>([])
   const [selectedPath, setSelectedPath] = useState(cardioPaths[0])
   const [showOnboarding, setShowOnboarding] = useState(
     () => window.localStorage.getItem('zhentu-onboarding-complete') !== 'true',
@@ -224,6 +325,22 @@ function App() {
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [destination, setDestination] = useState('北京')
   const [completedRemoteSteps, setCompletedRemoteSteps] = useState<string[]>([])
+
+  useEffect(() => {
+    return () => {
+      if (recordingUrl) {
+        URL.revokeObjectURL(recordingUrl)
+      }
+    }
+  }, [recordingUrl])
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop()
+      mediaRecorderRef.current?.stop()
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+    }
+  }, [])
 
   const submitSymptoms = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -237,6 +354,86 @@ function App() {
 
     setFormError('')
     setRecommendation(getRecommendation(normalizedSymptoms))
+  }
+
+  const startRecording = async () => {
+    const SpeechRecognition = window.SpeechRecognition ?? window.webkitSpeechRecognition
+
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !SpeechRecognition) {
+      setRecordingError('当前浏览器不支持录音翻译，请使用最新版 Chrome 或 Edge，或改用文字输入。')
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      const recognition = new SpeechRecognition()
+      recordingChunksRef.current = []
+      setRecordingError('')
+      dialectTextRef.current = ''
+      setDialectText('')
+      setTranslation('')
+      setRecordingUrl('')
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordingChunksRef.current.push(event.data)
+        }
+      }
+      recorder.onstop = () => {
+        const audioBlob = new Blob(recordingChunksRef.current, {
+          type: recorder.mimeType || 'audio/webm',
+        })
+        setRecordingUrl(URL.createObjectURL(audioBlob))
+        setTranslation(translateDialect(dialectTextRef.current, selectedDialect))
+        setIsRecording(false)
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+      }
+
+      recognition.lang = selectedDialect.speechLang
+      recognition.continuous = true
+      recognition.interimResults = true
+      recognition.onresult = (event) => {
+        let transcript = ''
+        for (let index = 0; index < event.results.length; index += 1) {
+          transcript += event.results[index][0].transcript
+        }
+        dialectTextRef.current = transcript
+        setDialectText(transcript)
+      }
+      recognition.onerror = () => {
+        setRecordingError('语音识别暂时失败，请靠近麦克风重试，或改用文字输入。')
+      }
+      recognition.onend = () => {
+        setTranslation(translateDialect(dialectTextRef.current, selectedDialect))
+      }
+
+      mediaRecorderRef.current = recorder
+      mediaStreamRef.current = stream
+      recognitionRef.current = recognition
+      recorder.start()
+      recognition.start()
+      setIsRecording(true)
+    } catch {
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop()
+      }
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+      setIsRecording(false)
+      setRecordingError('无法访问麦克风，请检查浏览器权限后重试。')
+    }
+  }
+
+  const stopRecording = () => {
+    recognitionRef.current?.stop()
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop()
+    }
+  }
+
+  const submitDialectTranslation = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setTranslation(translateDialect(dialectText, selectedDialect))
   }
 
   const finishOnboarding = (module?: ModuleId) => {
@@ -280,7 +477,7 @@ function App() {
         <nav aria-label="主要功能">
           {[
             ['guide', '智能导诊'],
-            ['map', '院内地图'],
+            ['dialect', '方言翻译'],
             ['cardio', '就医流程'],
             ['remote', '异地就医'],
           ].map(([id, label]) => (
@@ -377,81 +574,132 @@ function App() {
           </section>
         )}
 
-        {activeModule === 'map' && (
-          <section className="module map-module">
+        {activeModule === 'dialect' && (
+          <section className="module dialect-module">
             <div className="section-heading">
               <div>
-                <span className="eyebrow">院内空间导航</span>
-                <h1>先看清楚，再出发</h1>
-                <p>查看院区、楼层功能与上下楼方式，减少在院内来回寻找。</p>
+                <span className="eyebrow">就医沟通辅助</span>
+                <h1>方言听得懂，沟通更安心</h1>
+                <p>选择方言后直接录音，或输入常见说法，诊途会将其中的方言词整理为普通话表达。</p>
               </div>
-              <span className="demo-badge">非实景 · 演示示意图</span>
+              <span className="demo-badge">词汇辅助 · 结果请人工确认</span>
             </div>
 
-            <div className="map-grid">
-              <div className="campus-map">
-                <div className="map-road horizontal" />
-                <div className="map-road vertical" />
-                <span className="map-gate">南门入口</span>
-                {campusBuildings.map((building) => (
+            <div className="dialect-grid">
+              <form className="dialect-card" onSubmit={submitDialectTranslation}>
+                <label htmlFor="dialect">选择方言</label>
+                <select
+                  id="dialect"
+                  value={selectedDialect.id}
+                  disabled={isRecording}
+                  onChange={(event) => {
+                    const nextDialect = dialectOptions.find(
+                      (dialect) => dialect.id === event.target.value,
+                    )
+                    if (nextDialect) {
+                      stopRecording()
+                      setSelectedDialect(nextDialect)
+                      dialectTextRef.current = ''
+                      setDialectText('')
+                      setTranslation('')
+                    }
+                  }}
+                >
+                  {dialectOptions.map((dialect) => (
+                    <option key={dialect.id} value={dialect.id}>
+                      {dialect.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="dialect-description">{selectedDialect.description}</p>
+
+                <label htmlFor="dialect-text">方言内容</label>
+                <textarea
+                  id="dialect-text"
+                  value={dialectText}
+                  disabled={isRecording}
+                  onChange={(event) => {
+                    dialectTextRef.current = event.target.value
+                    setDialectText(event.target.value)
+                    setTranslation('')
+                  }}
+                  placeholder={`请输入${selectedDialect.name}说法`}
+                  rows={5}
+                />
+                <div className="recording-panel">
                   <button
+                    className={isRecording ? 'record-action recording' : 'record-action'}
                     type="button"
-                    key={building.id}
-                    className={`map-building ${building.className} ${
-                      selectedBuilding.id === building.id ? 'selected' : ''
-                    }`}
-                    onClick={() => setSelectedBuilding(building)}
+                    aria-pressed={isRecording}
+                    onClick={isRecording ? stopRecording : startRecording}
                   >
-                    <strong>{building.label}</strong>
-                    <small>{building.detail}</small>
+                    <span className="record-dot" aria-hidden="true" />
+                    {isRecording ? '停止并翻译' : '开始录音翻译'}
                   </button>
-                ))}
-                <div className="map-legend">
-                  <span>
-                    <i className="legend-building" /> 建筑
-                  </span>
-                  <span>
-                    <i className="legend-road" /> 通行道路
+                  <span className="recording-status">
+                    {isRecording ? '正在聆听，请说出方言内容…' : '录音停止后自动生成普通话结果'}
                   </span>
                 </div>
-              </div>
-
-              <aside className="map-detail">
-                <span className="panel-kicker">当前选择</span>
-                <h2>{selectedBuilding.label}</h2>
-                <p>{selectedBuilding.detail}</p>
-                <div className="floor-tabs" role="group" aria-label="选择楼层">
-                  {floors.map((floor) => (
+                {recordingError && (
+                  <p className="recording-error" role="alert">
+                    {recordingError}
+                  </p>
+                )}
+                {recordingUrl && (
+                  <audio className="recording-playback" controls src={recordingUrl}>
+                    您的浏览器不支持音频播放。
+                  </audio>
+                )}
+                <div className="examples dialect-examples" aria-label="方言示例">
+                  <span>快速填写</span>
+                  {selectedDialect.examples.map((example) => (
                     <button
                       type="button"
-                      key={floor.floor}
-                      className={selectedFloor.floor === floor.floor ? 'active' : ''}
-                      onClick={() => setSelectedFloor(floor)}
+                      key={example}
+                      disabled={isRecording}
+                      onClick={() => {
+                        dialectTextRef.current = example
+                        setDialectText(example)
+                        setTranslation('')
+                      }}
                     >
-                      {floor.floor}
+                      {example}
                     </button>
                   ))}
                 </div>
-                <div className="floor-plan">
-                  {selectedFloor.spaces.map((space, index) => (
-                    <div className={`space space-${index + 1}`} key={space}>
-                      {space}
-                    </div>
-                  ))}
-                  <span className="you-are-here">● 您在这里</span>
-                </div>
-                <div className="vertical-routes">
-                  <strong>上下楼方式</strong>
-                  {selectedFloor.vertical.map((route, index) => (
-                    <span key={route}>
-                      <i aria-hidden="true">{index === 1 ? '↗' : '↕'}</i>
-                      {route}
-                    </span>
-                  ))}
-                </div>
-                <p className="map-warning">
-                  此页面仅演示交互与信息结构，不代表真实院区布局，请以医院现场标识为准。
-                </p>
+                <button
+                  className="primary-action"
+                  type="submit"
+                  disabled={isRecording || !dialectText.trim()}
+                >
+                  翻译成普通话
+                  <span aria-hidden="true">→</span>
+                </button>
+              </form>
+
+              <aside className="translation-card" aria-live="polite">
+                <span className="panel-kicker">普通话结果</span>
+                {translation ? (
+                  <>
+                    <h2>{translation}</h2>
+                    <button
+                      className="use-translation"
+                      type="button"
+                      onClick={() => {
+                        setSymptoms(translation)
+                        setActiveModule('guide')
+                      }}
+                    >
+                      用于智能导诊
+                    </button>
+                  </>
+                ) : (
+                  <div className="translation-empty">
+                    <span aria-hidden="true">译</span>
+                    <h2>翻译结果会显示在这里</h2>
+                    <p>当前版本支持常见方言词汇，不替代专业人工翻译。</p>
+                  </div>
+                )}
               </aside>
             </div>
           </section>
