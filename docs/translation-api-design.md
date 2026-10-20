@@ -1,0 +1,104 @@
+# 方言翻译 API 实现
+
+状态：已实现 Node 后端、Ollama / OpenAI 兼容模型适配、前端连接与本地回退。已用本机模型检查固定合成医院样例，尚未完成母语者及医疗口译人员的准确性审校。[部署指南](local-model-deployment.md)包含运行命令和配置。
+
+## 翻译顺序
+
+1. 整句或明确收录的同义问法命中本地词库：立即返回，不调用模型；支持匹配时的简繁字形等价。多句只有在所有分句都命中时才完整组合，有未知分句时保留整条输入继续走参考/模型流程。
+2. 没有整句命中，包括本地只能生成“词语参考”的句子：开启模型补全后，把**原始文字**交给后端。
+3. 后端按方言与配置顺序选择模型，跳过未启用项；技术失败或输出检查失败时尝试备用模型。
+4. 返回通过检查的完整译文，标记“模型生成 · 待核对”并显示模型来源。
+5. 取消、超时、无可用模型或全部检查失败：保留本地参考和原文。
+
+不把字符串替换后的内容当作模型输入，也不只在 `unmatched` 状态触发，因为 `wording` 也表示整句尚未完整收录。
+
+## 接口
+
+### `POST /api/transcribe`
+
+这是可选的本地语音入口，使用 `multipart/form-data` 上传一次临时录音，字段名为 `file`。后端只在内存中读取并转发到 `HOSA_ASR_URL/audio/transcriptions`，并注入 `HOSA_ASR_MODEL`；不会将音频写入 HOSA 磁盘。ASR 服务应返回 `{ "text": "..." }`，HOSA 会限制识别文字最多 240 字，并把结果继续交给前端现有翻译逻辑。未配置 `HOSA_ASR_URL` 时返回 `ASR_NOT_CONFIGURED`。
+
+音频默认最多 12 MB，单次等待默认 45 秒。服务端仍执行连接凭证、CORS、限流和请求超时检查；不要把未鉴权的 ASR 服务直接暴露到公网。
+
+`POST /api/translate`，Content-Type 为 `application/json`。只接受以下三个字段，拒绝客户端指定模型、上游地址或提示词：
+
+```json
+{
+  "text": "我昨天晚上开始头晕，今天又吐了。",
+  "dialect": "cantonese",
+  "direction": "toDialect"
+}
+```
+
+`dialect` 为 `cantonese`、`minnan`、`shanghai`、`sichuan` 或 `northeast`；`direction` 为 `toDialect` 或 `toMandarin`；文字最多 240 字。地区由后端模板指定，不接受客户端 `region`。
+
+成功返回：
+
+```json
+{
+  "text": "我由琴晚开始头晕，今日又呕咗。",
+  "provider": "腾讯 Hy-MT2",
+  "providerId": "hy-mt2",
+  "needsReview": true
+}
+```
+
+上面的译文仅作接口示意，不表示真实模型实测或人工审校。模型结果不自动生成读音，不显示模型自报的准确率。
+
+`GET /api/health` 返回 `service: "hosa-translation"` 及已启用模型的 ID、名称、支持方言和可用状态。前端“检测连接”请求普通 `/api/health`（10 秒超时）；“检测模型推理”单独请求 `/api/health?probe=1`（40 秒超时），在模型列表可用后执行一次短文本推理，并额外返回 `ready`；`ready: false` 表示模型已安装但实际推理失败或超时。普通健康请求不执行推理，不暴露服务 URL 或密钥。
+
+错误统一返回 `{ "error": "错误码" }`：
+
+| 错误码 | HTTP | 含义 |
+| --- | --- | --- |
+| `INVALID_INPUT` | 400 / 413 / 415 | 输入、体积或内容类型不合法 |
+| `UNAUTHORIZED` | 401 | 后端连接凭证缺失或不匹配 |
+| `ORIGIN_NOT_ALLOWED` | 403 | 浏览器来源不在允许列表 |
+| `RATE_LIMITED` | 429 | 请求过于频繁 |
+| `BUSY` | 503 | 并发与等待队列均达到上限 |
+| `NO_PROVIDER` | 503 | 该方言没有启用模型 |
+| `MODELS_UNAVAILABLE` | 503 | 上游调用均失败 |
+| `TRANSLATION_UNVERIFIED` | 503 | 模型译文未通过完整性检查，且备用链未返回可用结果 |
+| `TIMEOUT` | 504 | 总请求期限已到 |
+| `ASR_NOT_CONFIGURED` | 503 | 未设置本地 ASR 地址 |
+| `INVALID_AUDIO` / `EMPTY_AUDIO` / `AUDIO_TOO_LARGE` | 400 / 413 | 录音格式、内容或大小不符合要求 |
+| `ASR_UNAVAILABLE` / `ASR_INVALID_RESPONSE` | 503 | ASR 上游不可用或返回无法确认 |
+| `ASR_TIMEOUT` | 504 | ASR 在配置的时限内没有返回 |
+
+## 模型适配与路由
+
+`server/models.example.json` 提供模板，`server/models.local.json` 用于本机配置，不提交 Git。配置检查拒绝将专用模型分配给未明确支持的方言。
+
+- Hy-MT2：粤语，chat 模板，可引用最多三条相关医院词库示例。
+- MiLMMT：粤语，按官方语言名称构造原始 completion 模板，使用翻译版权重。
+- Taigi：台湾台语，completion `[TRANS]` / `[HAN]` / `[ZH]` 模板；OpenCC 只做输入字形转换。
+- 通用模型：其余方言或备用模型，chat 模板；质量按选用模型评估。
+
+Ollama 使用 `/api/chat` 或 `/api/generate`，后者开启 `raw: true`。兼容运行时使用 `/v1/chat/completions` 或 `/v1/completions`。请求非流式，最多生成 640 tokens。模型服务密钥只从后端环境变量读取。
+
+## 医院场景检查与边界
+
+Hy-MT2 和通用模板要求只翻译、不回答医疗问题、不增加诊断或治疗建议，保留时间、左右部位、程度、否定和不确定语气，逐句完整翻译而非概括；按方言指导自然写法，避免机械添加语气词。医院参考按相邻汉字和场景选择，不仅按零散单字重合；示例不能加入新事实。专用 completion 模型使用固定模板，不假设其支持通用聊天指令。
+
+后端对字面数字、常见单位、中文数量、正式腹部/侧别部位、血压、日期、时刻和部分常见药名采用占位符保护，药名与相邻剂量合并为同一片段，要求每个标记恰好出现一次，恢复后核对数量集合。另检查部分明确症状（发烧、咳嗽、呕吐、过敏、怀孕、服药）的肯定/否定/不确定关系，避免整句仍有否定词却翻反了另一项症状。左右部位、部分时间锚点和问句意图也做有限检查；“今朝”按上海话的“今天”和粤语的“今天早上”分别处理。
+
+这些启发式检查无法证明医学语义准确：未覆盖全部药物、数量写法、同义词和方言否定表达，也无法完整解析主体、指代、多重否定或时间作用范围；可能误拒合理译文，也可能遗漏错误。所有模型译文保持待核对。可用 `npm run eval:translation` 重跑 11 条固定合成样例；真实质量仍需由母语者与医疗口译人员审阅。
+
+## 页面、录音与部署
+
+默认本地模式。开启后，文字发送到配置的后端和模型服务；音频仍进入浏览器语音识别流程，不交给翻译 API。编辑输入、切换方言或方向、调整连接、关闭模型补全及卸载页面都会取消旧翻译，并以请求编号防止迟到结果覆盖当前内容。
+
+前端保留暖色界面、语音输入和地图，新增连接检测、等待与取消、来源和回退提示。凭证仅在页面内存保留。后端不记录或持久保存原文、译文，模型运行时日志不由本项目控制。生成表达不自动加入正式词库。
+
+默认监听本机；非本机监听必须设置连接凭证及明确的前端来源，并放在 HTTPS 反向代理或隧道后。每个连接凭证每分钟默认接受 30 次翻译，本机无凭证时按连接地址限制；默认最多两条并发，另有 8 条等待队列，超过后返回 `BUSY`。单模型及总请求均有超时。浏览器断开时取消上游推理请求。
+
+后端同时托管 `/HOSA/` 与 `/api`，开发环境由 Vite 代理。GitHub Pages 仅托管静态前端，连接本机或远端后端仍需满足浏览器网络、HTTPS 和跨域要求。
+
+## 官方参考
+
+- [腾讯 Hy-MT2](https://github.com/Tencent-Hunyuan/Hy-MT2)
+- [小米 MiLMMT](https://github.com/xiaomi-research/gemmax)
+- [Taigi 模型卡、模板与授权](https://huggingface.co/Bohanlu/Taigi-Llama-2-Translator-7B)
+- [Ollama Chat API](https://docs.ollama.com/api/chat)、[Generate API](https://docs.ollama.com/api/generate)
+- [OpenCC-js](https://github.com/nk2028/opencc-js)
+- [vLLM 在线服务](https://docs.vllm.ai/en/latest/serving/online_serving/)

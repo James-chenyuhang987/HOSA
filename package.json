@@ -7,10 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "vitest run --environment jsdom",
+    "test": "vitest run --environment jsdom src && npm run test:server",
+    "test:server": "node --test server/*.test.mjs",
+    "eval:translation": "node --env-file-if-exists=server/.env server/translation-eval.mjs",
+    "server": "node --env-file-if-exists=server/.env server/index.mjs",
+    "server:share": "node --env-file-if-exists=server/.env server/share.mjs",
     "preview": "vite preview"
   },
+  "engines": { "node": ">=22.18.0" },
   "dependencies": {
+    "opencc-js": "^1.4.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

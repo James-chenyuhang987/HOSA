@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -85,6 +85,22 @@ class MockSpeechRecognition implements MockSpeechRecognitionInstance {
   }
 }
 
+class MockMediaRecorder {
+  static isTypeSupported() { return true }
+  state: RecordingState = 'inactive'
+  mimeType = 'audio/webm'
+  ondataavailable: ((event: { data: Blob }) => void) | null = null
+  onstop: (() => void) | null = null
+  onerror: (() => void) | null = null
+  constructor(_stream: MediaStream, _options?: MediaRecorderOptions) {}
+  start() { this.state = 'recording' }
+  stop() {
+    this.state = 'inactive'
+    this.ondataavailable?.({ data: new Blob(['audio'], { type: this.mimeType }) })
+    this.onstop?.()
+  }
+}
+
 function installSpeechRecognition() {
   MockSpeechRecognition.instances = []
   MockSpeechRecognition.stopEmitsEnd = true
@@ -97,6 +113,7 @@ function installSpeechRecognition() {
 
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
   delete window.SpeechRecognition
   delete window.webkitSpeechRecognition
   MockSpeechRecognition.instances = []
@@ -119,6 +136,7 @@ beforeEach(() => {
       },
     })
   }
+  window.localStorage.removeItem('zhentu-language')
   window.localStorage.setItem('zhentu-onboarding-complete', 'true')
 })
 
@@ -128,7 +146,7 @@ describe('诊途 application', () => {
     render(<App />)
 
     await user.type(screen.getByLabelText('普通话内容'), '我听不清医生说什么')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
 
     expect(screen.getByText('我听唔清医生讲乜。')).toBeInTheDocument()
     expect(screen.getByText('读法参考')).toBeInTheDocument()
@@ -152,7 +170,7 @@ describe('诊途 application', () => {
 
     await user.click(screen.getByRole('button', { name: '交换翻译方向' }))
     await user.type(screen.getByLabelText('粤语内容'), '我听唔清医生讲乜')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
 
     expect(screen.getByText('我听不清医生说什么。')).toBeInTheDocument()
     expect(screen.getByText('普通话译文')).toBeInTheDocument()
@@ -164,9 +182,9 @@ describe('诊途 application', () => {
 
     await user.click(screen.getByRole('button', { name: '交换翻译方向' }))
     await user.type(screen.getByLabelText('粤语内容'), '唔该，洗手间喺边度')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
 
-    expect(screen.getByText('请问洗手间在哪里。')).toBeInTheDocument()
+    expect(screen.getByText('请问洗手间在哪里？')).toBeInTheDocument()
   })
 
   it('offers Sichuan dialect phrases with a regional accuracy note', async () => {
@@ -198,7 +216,7 @@ describe('诊途 application', () => {
     render(<App />)
 
     await user.type(screen.getByLabelText('普通话内容'), '请问挂号处在哪里')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
     expect(screen.getByText('唔该，挂号处喺边度？')).toBeInTheDocument()
 
     await user.selectOptions(screen.getByLabelText('翻译成'), 'sichuan')
@@ -215,7 +233,7 @@ describe('诊途 application', () => {
 
     await user.clear(screen.getByLabelText('普通话内容'))
     await user.type(screen.getByLabelText('普通话内容'), '什么时候复诊')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
     expect(screen.getByText('啥时候回来复诊？')).toBeInTheDocument()
   })
 
@@ -224,20 +242,20 @@ describe('诊途 application', () => {
     render(<App />)
 
     await user.type(screen.getByLabelText('普通话内容'), '我怀孕了')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
     expect(screen.getByText('我怀孕喇。')).toBeInTheDocument()
 
     await user.clear(screen.getByLabelText('普通话内容'))
     await user.selectOptions(screen.getByLabelText('翻译成'), 'sichuan')
     await user.type(screen.getByLabelText('普通话内容'), '我要验血')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
-    expect(screen.getByText('我要验血嘛。')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
+    expect(screen.getByText('我要验血。')).toBeInTheDocument()
 
     await user.clear(screen.getByLabelText('普通话内容'))
     await user.selectOptions(screen.getByLabelText('翻译成'), 'minnan')
     await user.type(screen.getByLabelText('普通话内容'), '可以用医保吗')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
-    expect(screen.getByText('會當用健保無？')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
+    expect(screen.getByText('會當用醫保無？')).toBeInTheDocument()
   })
 
   it('translates ordinary hospital questions with generic dialect wording', async () => {
@@ -246,13 +264,13 @@ describe('诊途 application', () => {
 
     await user.type(screen.getByLabelText('普通话内容'), '请问医院在哪里？')
     await user.selectOptions(screen.getByLabelText('翻译成'), 'minnan')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
     expect(screen.getByText('請問醫院佇佗位？')).toBeInTheDocument()
 
     await user.clear(screen.getByLabelText('普通话内容'))
     await user.selectOptions(screen.getByLabelText('翻译成'), 'shanghai')
     await user.type(screen.getByLabelText('普通话内容'), '请问医院在哪里？')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
     expect(screen.getByText('请问医院勒啥地方？')).toBeInTheDocument()
   })
 
@@ -267,11 +285,79 @@ describe('诊途 application', () => {
     expect(screen.getByText('词语参考')).toBeInTheDocument()
   })
 
+  it.each([
+    ['cantonese', '呢只药一日食几次？'],
+    ['minnan', '這款藥一工食幾擺？'],
+    ['shanghai', '搿种药一天吃几趟？'],
+    ['sichuan', '这个药一天吃几回？'],
+    ['northeast', '这药一天吃几回？'],
+  ])('matches equivalent medication questions in %s without inventing a dose', async (dialect, expected) => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.type(screen.getByLabelText('普通话内容'), '这个药每天吃几次？')
+    await user.selectOptions(screen.getByLabelText('翻译成'), dialect)
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
+
+    expect(screen.getByText(expected)).toBeInTheDocument()
+    expect(screen.getByText('常用短句')).toBeInTheDocument()
+    expect(screen.getByText(/这是用药询问，不提供服药建议/)).toBeInTheDocument()
+  })
+
+  it('preserves uncertainty about pregnancy and negation of drug allergies', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(screen.getByLabelText('普通话内容'), '我可能怀孕了')
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
+    expect(screen.getByText('我可能怀孕喇。')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('普通话内容'))
+    await user.type(screen.getByLabelText('普通话内容'), '我没有药物过敏史')
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
+    expect(screen.getByText('我冇药物过敏史。')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('普通话内容'))
+    await user.type(screen.getByLabelText('普通话内容'), '我不确定有没有药物过敏史')
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
+    expect(screen.queryByText('常用短句')).not.toBeInTheDocument()
+    expect(screen.queryByText('我冇药物过敏史。')).not.toBeInTheDocument()
+  })
+
+  it('recognizes a symptom synonym while preserving its severity', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(screen.getByLabelText('普通话内容'), '我胸口很疼！')
+    await user.selectOptions(screen.getByLabelText('翻译成'), 'northeast')
+    expect(screen.getByText('我胸口疼得厉害！')).toBeInTheDocument()
+    expect(screen.getByText('常用短句')).toBeInTheDocument()
+  })
+
+  it('translates new hospital phrases back from a dialect into Mandarin', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(screen.getByLabelText('普通话内容'), '请把复诊时间写下来')
+    await user.selectOptions(screen.getByLabelText('翻译成'), 'minnan')
+    expect(screen.getByText('請共複診時間寫落來。')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '交换翻译方向' }))
+    expect(screen.getByText('请把复诊时间写下来。')).toBeInTheDocument()
+    expect(screen.getByText('常用短句')).toBeInTheDocument()
+  })
+
+  it('covers hospital wayfinding and keeps the formal department name', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(screen.getByLabelText('普通话内容'), '妇产科在哪里？')
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
+    expect(screen.getByText('唔该，妇产科喺边度？')).toBeInTheDocument()
+    expect(screen.getByText('常用短句')).toBeInTheDocument()
+  })
+
   it('requires source text before translating', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
 
     expect(screen.getByText('请先输入想翻译的普通话。')).toBeInTheDocument()
   })
@@ -289,9 +375,9 @@ describe('诊途 application', () => {
     render(<App />)
 
     await user.type(screen.getByLabelText('普通话内容'), '我听不清医生说什么')
-    await user.click(screen.getByRole('button', { name: '翻译这句话' }))
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
     await user.click(screen.getByRole('button', { name: '医院地图' }))
-    expect(screen.getByRole('heading', { name: '先看清楚，再出发' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '找到要去的医院' })).toBeInTheDocument()
     expect(screen.queryByLabelText('普通话内容')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '方言翻译' }))
@@ -319,6 +405,9 @@ describe('诊途 application', () => {
     window.localStorage.removeItem('zhentu-onboarding-complete')
     render(<App />)
 
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('先选方言，再输入或录音；译文可以放大给对方看。')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '使用引导' }))
     expect(screen.getByRole('dialog', { name: '先把想说的话翻译好' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '开始翻译' }))
 
@@ -341,7 +430,7 @@ describe('诊途 application', () => {
     expect(screen.getByLabelText('普通话内容')).toHaveValue('我听不清医生说什么')
     expect(Recognition.instances[0].continuous).toBe(true)
     expect(screen.getByText('我听唔清医生讲乜。')).toBeInTheDocument()
-    expect(screen.getByText('已识别并完成翻译，可以编辑文字后再次翻译。')).toBeInTheDocument()
+    expect(screen.getByText('已识别文字，可以编辑；翻译结果见下方。')).toBeInTheDocument()
   })
 
   it('falls back to abort when the browser delays the end callback', async () => {
@@ -353,7 +442,7 @@ describe('诊途 application', () => {
     await user.click(screen.getByRole('button', { name: '开始录音' }))
     await user.click(screen.getByRole('button', { name: '结束录音' }))
 
-    expect(screen.getByRole('button', { name: '立即结束录音' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '取消识别' })).toBeEnabled()
     await new Promise((resolve) => setTimeout(resolve, 5200))
 
     expect(screen.getByRole('button', { name: '开始录音' })).toBeInTheDocument()
@@ -367,7 +456,7 @@ describe('诊途 application', () => {
 
     await user.click(screen.getByRole('button', { name: '开始录音' }))
     await user.click(screen.getByRole('button', { name: '结束录音' }))
-    await user.click(screen.getByRole('button', { name: '立即结束录音' }))
+    await user.click(screen.getByRole('button', { name: '取消识别' }))
 
     expect(screen.getByRole('button', { name: '开始录音' })).toBeInTheDocument()
   })
@@ -383,7 +472,7 @@ describe('诊途 application', () => {
     await user.click(screen.getByRole('button', { name: '结束录音' }))
 
     expect(screen.getByText('我听唔清医生讲乜。')).toBeInTheDocument()
-    expect(screen.getByText('已识别并完成翻译，可以编辑文字后再次翻译。')).toBeInTheDocument()
+    expect(screen.getByText('已识别文字，可以编辑；翻译结果见下方。')).toBeInTheDocument()
   })
 
   it('keeps a final result that arrives just after the end event', async () => {
@@ -489,4 +578,76 @@ describe('诊途 application', () => {
 
     expect(screen.getByText('当前浏览器不支持语音识别，请直接输入文字。')).toBeInTheDocument()
   })
+
+  it('sends a temporary recording to the configured local ASR and translates its text', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ service: 'hosa-translation', models: [], asr: {
+        configured: true, label: '测试 ASR', model: 'qwen3-asr-1.7b',
+      } }))
+      .mockResolvedValueOnce(Response.json({ text: '你好', provider: '测试 ASR' }))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('MediaRecorder', MockMediaRecorder)
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
+    })
+    render(<App />)
+    await user.click(screen.getByText(/^翻译设置/u))
+    await user.click(screen.getByText('连接设置'))
+    await user.click(screen.getByRole('button', { name: '检测连接' }))
+    expect(await screen.findByText('服务已连接。模型推理可单独检测。')).toBeInTheDocument()
+    await user.click(screen.getByRole('switch', { name: /优先使用本地语音模型/u }))
+    await user.click(screen.getByRole('button', { name: '开始录音' }))
+    expect(screen.getByRole('button', { name: '结束录音' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '结束录音' }))
+    expect(await screen.findByText('你好。')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/transcribe')
+    expect(fetchMock.mock.calls[1][1].body).toBeInstanceOf(FormData)
+  })
+
+  it('lets text edits cancel recording and prevents a late transcript from overwriting them', async () => {
+    const user = userEvent.setup()
+    const Recognition = installSpeechRecognition()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: '开始录音' }))
+    await act(async () => Recognition.instances[0].emitResult('旧的录音文字'))
+    await user.clear(screen.getByLabelText('普通话内容'))
+    await user.type(screen.getByLabelText('普通话内容'), '我听不清医生说什么')
+    await act(async () => Recognition.instances[0].emitResult('迟到的识别结果'))
+    expect(screen.getByLabelText('普通话内容')).toHaveValue('我听不清医生说什么')
+    expect(screen.getByRole('button', { name: '开始录音' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '立即翻译' }))
+    expect(screen.getByText('我听唔清医生讲乜。')).toBeInTheDocument()
+  })
+
+  it('allows visiting the map while ASR is pending and retains the result on return', async () => {
+    const user = userEvent.setup()
+    let finish!: (value: Response) => void
+    const trackStop = vi.fn()
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(Response.json({ service: 'hosa-translation', models: [], asr: { configured: true } }))
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve })))
+    vi.stubGlobal('MediaRecorder', MockMediaRecorder)
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true, value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: trackStop }] }) },
+    })
+    render(<App />)
+    await user.click(screen.getByText(/^翻译设置/u))
+    await user.click(screen.getByText('连接设置'))
+    await user.click(screen.getByRole('button', { name: '检测连接' }))
+    await screen.findByText('服务已连接。模型推理可单独检测。')
+    await user.click(screen.getByRole('switch', { name: /优先使用本地语音模型/u }))
+    await user.click(screen.getByRole('button', { name: '开始录音' }))
+    await user.click(screen.getByRole('button', { name: '结束录音' }))
+    expect(trackStop).toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: '医院地图' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: '医院地图' }))
+    await act(async () => { finish(Response.json({ text: '你好' })); await Promise.resolve() })
+    await user.click(screen.getByRole('button', { name: '方言翻译' }))
+    expect(screen.getByLabelText('普通话内容')).toHaveValue('你好')
+    expect(screen.getByText('你好。')).toBeInTheDocument()
+  })
+
 })

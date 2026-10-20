@@ -11,6 +11,12 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+!.env.example
+server/models.local.json
+models/
+*.gguf
 
 # Editor directories and files
 .vscode/*

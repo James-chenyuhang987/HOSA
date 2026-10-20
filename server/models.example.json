@@ -1,0 +1,36 @@
+{
+  "models": [
+    {
+      "id": "hy-mt2", "label": "腾讯 Hy-MT2", "enabled": true,
+      "runtime": "ollama", "profile": "hy-mt",
+      "baseUrl": "http://127.0.0.1:11434", "model": "hf.co/tencent/Hy-MT2-1.8B-GGUF:Q4_K_M"
+    },
+    {
+      "id": "hy-mt2-7b", "label": "腾讯 Hy-MT2 7B（更高质量）", "enabled": false,
+      "runtime": "ollama", "profile": "hy-mt",
+      "baseUrl": "http://127.0.0.1:11434", "model": "hf.co/tencent/Hy-MT2-7B-GGUF:Q4_K_M"
+    },
+    {
+      "id": "milmmt", "label": "小米 MiLMMT", "enabled": false,
+      "runtime": "openai", "profile": "milmmt",
+      "baseUrl": "http://127.0.0.1:8001/v1", "model": "xiaomi-research/MiLMMT-46-4B-v1.0"
+    },
+    {
+      "id": "taigi", "label": "台语 Translator（台湾）", "enabled": false,
+      "runtime": "openai", "profile": "taigi",
+      "baseUrl": "http://127.0.0.1:8002/v1", "model": "Bohanlu/Taigi-Llama-2-Translator-7B"
+    },
+    {
+      "id": "general", "label": "通用方言模型", "enabled": false,
+      "runtime": "ollama", "profile": "general",
+      "baseUrl": "http://127.0.0.1:11434", "model": "qwen3:4b"
+    }
+  ],
+  "routes": {
+    "cantonese": ["hy-mt2", "hy-mt2-7b", "milmmt", "general"],
+    "minnan": ["taigi", "general"],
+    "shanghai": ["general"],
+    "sichuan": ["general"],
+    "northeast": ["general"]
+  }
+}

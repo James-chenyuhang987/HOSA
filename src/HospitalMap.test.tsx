@@ -7,10 +7,26 @@ import HospitalMap from './HospitalMap'
 afterEach(cleanup)
 
 describe('hospital demonstration map', () => {
+  it('searches real hospitals through an external map without inventing an indoor location', async () => {
+    const user = userEvent.setup()
+    render(<HospitalMap />)
+    expect(screen.getByRole('button', { name: '请先填写医院名称' })).toBeDisabled()
+    expect(screen.getByText('院区总览')).not.toBeVisible()
+    await user.type(screen.getByLabelText('医院名称（含院区）'), '四川大学华西医院本部')
+    await user.type(screen.getByLabelText('所在城市（可选）'), '成都')
+    const link = screen.getByRole('link', { name: /在高德查找真实医院/u })
+    const url = new URL(link.getAttribute('href')!)
+    expect(url.origin).toBe('https://uri.amap.com')
+    expect(url.searchParams.get('keyword')).toBe('四川大学华西医院本部')
+    expect(url.searchParams.get('city')).toBe('成都')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.getByText('院区总览')).not.toBeVisible()
+  })
   it('resets to a valid floor and shows building-specific services when changing buildings', async () => {
     const user = userEvent.setup()
     render(<HospitalMap />)
-
+    await user.click(screen.getByText('查看院区示意演示'))
     await user.click(screen.getByRole('button', { name: '3F' }))
     expect(screen.getByRole('button', { name: '神经内科' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^急诊楼$/ }))
@@ -25,7 +41,7 @@ describe('hospital demonstration map', () => {
   it('locates a search result in the right building and floor', async () => {
     const user = userEvent.setup()
     render(<HospitalMap />)
-
+    await user.click(screen.getByText('查看院区示意演示'))
     await user.type(screen.getByLabelText('想去哪里？'), '超声')
     const results = screen.getByRole('list', { name: '地图搜索结果' })
     await user.click(within(results).getByRole('button', { name: /超声检查/ }))
@@ -40,7 +56,7 @@ describe('hospital demonstration map', () => {
   it('handles an unknown destination and clears the search', async () => {
     const user = userEvent.setup()
     render(<HospitalMap />)
-
+    await user.click(screen.getByText('查看院区示意演示'))
     await user.type(screen.getByLabelText('想去哪里？'), '不存在的地方')
     expect(screen.getByText('没有找到这个地点，请换个关键词或查看各楼层。')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '清空地图搜索' }))
@@ -53,7 +69,7 @@ describe('hospital demonstration map', () => {
   it('finds services in multiple buildings using the common destination shortcuts', async () => {
     const user = userEvent.setup()
     render(<HospitalMap />)
-
+    await user.click(screen.getByText('查看院区示意演示'))
     const shortcuts = screen.getByRole('group', { name: '常用地图目的地' })
     await user.click(within(shortcuts).getByRole('button', { name: '卫生间' }))
     const results = screen.getByRole('list', { name: '地图搜索结果' })

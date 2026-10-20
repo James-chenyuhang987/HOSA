@@ -1,0 +1,65 @@
+import '@testing-library/jest-dom/vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
+import HospitalPhrases from './HospitalPhrases'
+
+afterEach(cleanup)
+const search = (value: string) => fireEvent.change(screen.getByRole('searchbox', { name: '查找医院短句' }), { target: { value } })
+const openLibrary = () => fireEvent.click(screen.getByText('医院常用短句'))
+
+it('finds phrases across hospital categories and only translates after selection', () => {
+  const choose = vi.fn()
+  render(<HospitalPhrases dialect="cantonese" direction="toDialect" onChoose={choose} quick={['你好']} />)
+  openLibrary()
+  search('喝水')
+  expect(screen.getByRole('button', { name: '检查前能喝水吗' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '你好' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '全部' })).toHaveAttribute('aria-pressed', 'true')
+  expect(choose).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: '检查前能喝水吗' }))
+  expect(choose).toHaveBeenCalledExactlyOnceWith('检查前能喝水吗')
+})
+
+it('finds an explicitly stored alias and a selected dialect phrase in the correct direction', () => {
+  const choose = vi.fn()
+  const view = render(<HospitalPhrases dialect="sichuan" direction="toMandarin" onChoose={choose} quick={[]} />)
+  openLibrary()
+  search('我头疼')
+  expect(screen.getByRole('button', { name: '我脑壳痛。' })).toBeInTheDocument()
+  search('脑壳痛')
+  fireEvent.click(screen.getByRole('button', { name: '我脑壳痛。' }))
+  expect(choose).toHaveBeenCalledExactlyOnceWith('我脑壳痛。')
+  view.rerender(<HospitalPhrases dialect="cantonese" direction="toMandarin" onChoose={choose} quick={[]} />)
+  expect(screen.getByText('没有找到相关短句')).toBeInTheDocument()
+})
+
+it('recovers from an empty search and restores focus without choosing any phrase', () => {
+  const choose = vi.fn()
+  render(<HospitalPhrases dialect="cantonese" direction="toDialect" onChoose={choose} quick={[]} />)
+  openLibrary()
+  search('不存在的关键字XYZ')
+  expect(screen.getByRole('status')).toHaveTextContent('搜索结果：0 条短句')
+  fireEvent.click(screen.getByRole('button', { name: '返回场景短句' }))
+  expect(screen.getByRole('searchbox')).toHaveValue('')
+  expect(screen.getByRole('searchbox')).toHaveFocus()
+  expect(screen.getByRole('button', { name: '挂号' })).toHaveAttribute('aria-pressed', 'true')
+  search('头晕')
+  fireEvent.click(screen.getByRole('button', { name: '清除搜索' }))
+  expect(screen.getByRole('searchbox')).toHaveFocus()
+  expect(screen.getByRole('searchbox')).toHaveValue('')
+  expect(choose).not.toHaveBeenCalled()
+})
+
+it('clears a search when a scene is chosen and can show the whole library', () => {
+  render(<HospitalPhrases dialect="cantonese" direction="toDialect" onChoose={vi.fn()} quick={[]} />)
+  openLibrary()
+  search('头晕')
+  fireEvent.click(screen.getByRole('button', { name: '用药' }))
+  expect(screen.getByRole('searchbox')).toHaveValue('')
+  expect(screen.getByRole('button', { name: '用药' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: '这个药一天吃几次' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '我头晕' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '全部' }))
+  expect(screen.getByRole('button', { name: '我头晕' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '这个药一天吃几次' })).toBeInTheDocument()
+})

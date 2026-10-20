@@ -7,6 +7,13 @@ function HospitalMap() {
   const [floorId, setFloorId] = useState('1F')
   const [selectedSpace, setSelectedSpace] = useState('')
   const [query, setQuery] = useState('')
+  const [hospitalName, setHospitalName] = useState('')
+  const [city, setCity] = useState('')
+  const realMapUrl = new URL('https://uri.amap.com/search')
+  realMapUrl.searchParams.set('keyword', hospitalName.trim())
+  if (city.trim()) realMapUrl.searchParams.set('city', city.trim())
+  realMapUrl.searchParams.set('src', 'zhentu')
+  realMapUrl.searchParams.set('callnative', '0')
   const building = hospitalBuildings.find((item) => item.id === buildingId) ?? hospitalBuildings[0]
   const floor = building.floors.find((item) => item.id === floorId) ?? building.floors[0]
   const searchTerm = query.trim()
@@ -25,12 +32,26 @@ function HospitalMap() {
       <div className="hm-heading">
         <div>
           <span className="eyebrow">院区 · 楼层 · 服务点</span>
-          <h1 id="hospital-map-title">先看清楚，再出发</h1>
-          <p>点选建筑，查看楼层与服务点；也可以直接搜索想去的地方。</p>
+          <h1 id="hospital-map-title">找到要去的医院</h1>
+          <p>填写医院和院区名称，在地图中确认位置；院内科室请查看医院官方指引。</p>
         </div>
-        <span className="hm-demo-badge">演示示意图 · 非真实院区</span>
       </div>
-
+      <section className="hm-real-search" aria-label="查找真实医院">
+        <div><label htmlFor="real-hospital-name">医院名称（含院区）</label>
+          <input id="real-hospital-name" type="search" maxLength={100} value={hospitalName} placeholder="例如：四川大学华西医院本部"
+            onChange={(event) => setHospitalName(event.target.value)} />
+        </div>
+        <div><label htmlFor="real-hospital-city">所在城市（可选）</label>
+          <input id="real-hospital-city" type="text" maxLength={40} value={city} placeholder="例如：成都"
+            onChange={(event) => setCity(event.target.value)} />
+        </div>
+        {hospitalName.trim() ? <a href={realMapUrl.href} target="_blank" rel="noopener noreferrer">在高德查找真实医院 ↗</a>
+          : <button type="button" disabled>请先填写医院名称</button>}
+        <p>点击后在新页面打开高德地图，仅传递此处填写的医院名称和城市。请核对院区与地址。</p>
+      </section>
+      <details className="hm-demo-details">
+        <summary>查看院区示意演示 <span>非真实医院，不能用于实际找路</span></summary>
+        <span className="hm-demo-badge">演示示意图 · 非真实院区</span>
       <div className="hm-search-card">
         <label htmlFor="hospital-map-search">想去哪里？</label>
         <div className="hm-search-field">
@@ -177,6 +198,7 @@ function HospitalMap() {
         </section>
       </div>
       <p className="hm-notice">当前地图为交互演示，不代表真实医院布局，也不提供实时定位。实际科室位置请以医院官方地图与现场标识为准。</p>
+      </details>
     </section>
   )
 }

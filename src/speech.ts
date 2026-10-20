@@ -4,6 +4,8 @@ export type VoiceStatus =
   | 'listening'
   | 'reconnecting'
   | 'stopping'
+  | 'transcribing'
+  | 'uploading'
   | 'complete'
   | 'unsupported'
   | 'permission-denied'
@@ -109,7 +111,7 @@ export function createVoiceSession(options: VoiceOptions): VoiceSession {
           ? `${message} 已保留并翻译已听到的文字，请核对。`
           : partial
             ? '已保留并翻译临时识别文字，浏览器尚未确认最终结果，请核对。'
-            : '已识别并完成翻译，可以编辑文字后再次翻译。',
+            : '已识别文字，可以编辑；翻译结果见下方。',
       )
     } else {
       options.onStatus(errorStatus, message ?? emptyMessage())
@@ -281,7 +283,7 @@ export function createVoiceSession(options: VoiceOptions): VoiceSession {
       window.clearTimeout(restartTimer)
       window.clearTimeout(endTimer)
       startTimer = restartTimer = endTimer = undefined
-      options.onStatus('stopping', '正在等待最后的文字，请稍候；再次点击可立即结束。')
+      options.onStatus('stopping', '麦克风正在关闭，等待最后的识别文字…')
       if (!attempt || attempt.ended) {
         finish()
         return
