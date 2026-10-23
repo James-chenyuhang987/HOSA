@@ -9,6 +9,6 @@ export default function TranslationService({ enabled, checking, checked, availab
         {enabled ? '关闭整句翻译' : checking ? '连接中…' : checked ? '重新连接' : '一键开启'}
       </button>
     </div>
-    <p>{enabled ? '输入停顿后发送至翻译服务；重要信息请核对。' : '点击开启后，输入文字会发送至已配置的翻译服务。'}</p>
+    <p>{enabled ? '输入停顿后发送至已配置的增强翻译服务；重要信息请核对。' : '当前使用离线医院词库，常用短句无需服务器；未覆盖整句时可选开启增强翻译。'}</p>
   </div>
 }

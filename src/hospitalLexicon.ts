@@ -48,7 +48,7 @@ const readingNotes: Record<DialectId, string> = {
 
 // New entries are written communication references, pending native-speaker review.
 // Preserve clinical terms and question/statement polarity instead of adding dialect markers mechanically.
-export const hospitalLexicon: readonly HospitalEntry[] = [
+const baseHospitalLexicon: readonly HospitalEntry[] = [
   {
     source: '我已经预约了', category: 'registration', aliases: ['我预约好了', '我已经预约'],
     variants: {
@@ -598,6 +598,101 @@ export const hospitalLexicon: readonly HospitalEntry[] = [
       sichuan: '麻烦把检查的时间和地点写下来。', northeast: '麻烦把检查的时间和地点写下来。',
     },
   },
+]
+
+// High-frequency expressions that benefit from an offline result during a hospital visit.
+// Formal medical terms stay unchanged where possible; dialect wording is deliberately
+// conservative because these entries are shown without a model or a remote service.
+const additionalHospitalEntries: readonly HospitalEntry[] = [
+  {
+    source: '我胸口痛', category: 'symptoms', aliases: ['我胸口疼'],
+    variants: {
+      cantonese: '我个胸口痛。', minnan: '我胸坎疼。', shanghai: '我胸口痛。',
+      sichuan: '我胸口痛。', northeast: '我胸口疼。',
+    },
+  },
+  {
+    source: '我恶心想吐', category: 'symptoms', aliases: ['我想呕吐'],
+    variants: {
+      cantonese: '我作呕，想呕。', minnan: '我噁心欲吐。', shanghai: '我恶心，要呕。',
+      sichuan: '我恶心，想吐。', northeast: '我恶心想吐。',
+    },
+  },
+  {
+    source: '我对药物过敏', category: 'history', aliases: ['我有药物过敏'],
+    variants: {
+      cantonese: '我对药物过敏。', minnan: '我對藥物過敏。', shanghai: '我对药物过敏。',
+      sichuan: '我对药物过敏。', northeast: '我对药物过敏。',
+    },
+  },
+  {
+    source: '我吃饭后更痛', category: 'symptoms', aliases: ['我吃东西后更痛'],
+    variants: {
+      cantonese: '我食饭之后更加痛。', minnan: '我食飯了後閣較疼。', shanghai: '我吃饭以后更加痛。',
+      sichuan: '我吃饭后更痛。', northeast: '我吃饭以后更疼。',
+    },
+  },
+  {
+    source: '检查前需要空腹吗', category: 'examination', aliases: ['检查前要空腹吗'],
+    variants: {
+      cantonese: '检查之前使唔使空肚？', minnan: '檢查以前愛空腹無？', shanghai: '检查前要空腹伐？',
+      sichuan: '检查前要空肚子不？', northeast: '检查前得空腹不？',
+    },
+  },
+  {
+    source: '报告什么时候出来', category: 'examination', aliases: ['检查报告什么时候出来'],
+    variants: {
+      cantonese: '报告几时出？', minnan: '報告啥物時陣出？', shanghai: '报告啥辰光出来？',
+      sichuan: '报告好久出来？', northeast: '报告啥时候出来？',
+    },
+  },
+  {
+    source: '我需要家属陪同', category: 'inpatient', aliases: ['需要家属陪着吗'],
+    variants: {
+      cantonese: '我需要家属陪住。', minnan: '我需要家屬陪伴。', shanghai: '我需要家属陪着。',
+      sichuan: '我需要家属陪着。', northeast: '我得家属陪着。',
+    },
+  },
+  {
+    source: '我想改预约时间', category: 'registration', aliases: ['我想改预约'],
+    variants: {
+      cantonese: '我想改预约时间。', minnan: '我欲改預約時間。', shanghai: '我想改预约辰光。',
+      sichuan: '我想改预约时间。', northeast: '我想改预约时间。',
+    },
+  },
+  {
+    source: '请重复一遍', category: 'communication', aliases: ['请再说一遍'],
+    variants: {
+      cantonese: '唔该再讲一次。', minnan: '請閣講一擺。', shanghai: '请再讲一遍。',
+      sichuan: '麻烦再说一遍。', northeast: '麻烦再说一遍。',
+    },
+  },
+  {
+    source: '我没有带病历', category: 'history', aliases: ['我没带病历'],
+    variants: {
+      cantonese: '我冇带病历。', minnan: '我無帶病歷。', shanghai: '我呒没带病历。',
+      sichuan: '我没得带病历。', northeast: '我没带病历。',
+    },
+  },
+  {
+    source: '我忘记带身份证', category: 'registration', aliases: ['我忘带身份证了'],
+    variants: {
+      cantonese: '我唔记得带身份证。', minnan: '我袂記得帶身分證。', shanghai: '我忘记带身份证了。',
+      sichuan: '我忘了带身份证。', northeast: '我忘带身份证了。',
+    },
+  },
+  {
+    source: '需要住院几天', category: 'inpatient', aliases: ['要住院几天'],
+    variants: {
+      cantonese: '要住院几多日？', minnan: '欲住院幾工？', shanghai: '要住院几日？',
+      sichuan: '要住院好久？', northeast: '得住院几天？',
+    },
+  },
+]
+
+export const hospitalLexicon: readonly HospitalEntry[] = [
+  ...baseHospitalLexicon,
+  ...additionalHospitalEntries,
 ]
 
 export function hospitalPhrasesFor(dialect: DialectId): Phrase[] {

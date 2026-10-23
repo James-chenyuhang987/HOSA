@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { BackendConnection, ModelHealth, SpeechBackend } from './translationTypes'
+import { dialectSpeechResources } from './dialectResources'
 
 type Props = {
   enabled: boolean; disabled: boolean; connection: BackendConnection; checking: boolean
@@ -22,7 +23,7 @@ export default function ModelConnection(props: Props) {
           onChange={(event) => props.onModeChange(event.target.checked)} />
         <span><strong>使用本地模型补全</strong><small>词库未覆盖的整句，自动交给已配置模型</small></span>
       </label>
-      <p className="model-privacy">开启后，输入停顿时文字会发送到当前翻译后端。</p>
+      <p className="model-privacy">这是可选增强项。GitHub Pages 的离线医院词库不需要你的电脑运行服务器；开启后才会把未覆盖整句发送到已配置服务。</p>
       <label className="model-toggle speech-toggle">
         <input type="checkbox" role="switch" checked={props.asrEnabled} disabled={props.disabled}
           onChange={(event) => props.onAsrModeChange(event.target.checked)} />
@@ -31,6 +32,13 @@ export default function ModelConnection(props: Props) {
         </small></span>
       </label>
       <p className="model-privacy">开启后临时录音会发送到当前后端的语音服务，本应用不保存音频。浏览器语音识别是否使用云端由浏览器决定。</p>
+      <details className="speech-resources">
+        <summary>方言语音资料</summary>
+        <p>截图中的 WenetSpeech 系列是公开语音语料，不是可以直接嵌入网页的翻译模型。这里用于说明方言识别覆盖与词形参考；应用不会自动下载语料或上传医疗录音。</p>
+        <ul>{dialectSpeechResources.map((resource) => <li key={resource.name}>
+          <a href={resource.url} target="_blank" rel="noreferrer">{resource.name}</a><span>{resource.purpose}</span>
+        </li>)}</ul>
+      </details>
       <details>
         <summary>连接设置</summary>
         <div className="model-fields">

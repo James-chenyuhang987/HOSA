@@ -1132,6 +1132,13 @@ footer {
 .model-toggle strong { font-size: 14px; font-weight: 600; }
 .model-toggle small { display: block; margin-top: 4px; color: #807c72; font-size: 11px; }
 .model-privacy { margin: 12px 0; color: #807c72; font-size: 11px; line-height: 1.7; }
+.speech-resources { margin: 14px 0 4px; padding-top: 10px; border-top: 1px solid var(--line); }
+.speech-resources summary { color: var(--ink); font-size: 12px; cursor: pointer; }
+.speech-resources p { margin: 10px 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.speech-resources ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.speech-resources li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; }
+.speech-resources a { color: var(--accent); font-weight: 650; }
+.speech-resources li span { color: var(--muted); }
 .speech-toggle { margin-top: 16px; padding-top: 15px; border-top: 1px solid rgba(92, 100, 85, 0.12); }
 .speech-privacy { margin-top: 8px; }
 .model-connection summary { width: fit-content; color: #527a75; cursor: pointer; font-size: 12px; }
