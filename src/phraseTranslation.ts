@@ -4,10 +4,29 @@ import type { Direction, Translation } from './translationTypes'
 import { replaceWording } from './medicalLiterals'
 
 const simplify = OpenCC.Converter({ from: 't', to: 'cn' })
-const stripEnding = (text: string) => text.trim().replace(/[。！？!?]+$/u, '')
+const stripEnding = (text: string) => text.trim().replace(/[。！？!?；;，,、]+$/u, '')
 
-// Script and punctuation equivalence only. Never remove negation, uncertainty or quantities.
-export const normalizeForMatch = (text: string) => stripEnding(simplify(text.normalize('NFC'))).replace(/，/gu, ',').replace(/\s*([,；;])\s*/gu, '$1')
+const normalizeSpeechLayout = (text: string) => text
+  .replace(/[\u200b\u200c\u200d]/gu, '')
+  .replace(/[\r\n]+/gu, '')
+  .replace(/(?<=[\p{Script=Han}])\s+(?=[\p{Script=Han}])/gu, '')
+  .replace(/\s+/gu, ' ')
+
+// Browser ASR often adds a leading filler or spaces between each Han character.
+// Strip only conversational fillers at the boundary; never remove words inside
+// the clinical sentence, where doing so could change meaning.
+const normalizeSpeechFiller = (text: string) => text.replace(/^(?:嗯+|呃+|啊+|那个|就是)[\s，,、:：-]*/u, '')
+
+// Script, punctuation and speech-layout equivalence only. Never remove negation,
+// uncertainty or quantities from the clinical sentence.
+export const normalizeForMatch = (text: string) => {
+  const simplified = simplify(normalizeSpeechFiller(normalizeSpeechLayout(text.normalize('NFC'))))
+  return stripEnding(simplified)
+    .replace(/[，、]/gu, ',')
+    .replace(/；/gu, ';')
+    .replace(/：/gu, ':')
+    .replace(/\s*([,;:])\s*/gu, '$1')
+}
 export const endingFor = (text: string, reference = '') => /[?？]$/u.test(text.trim()) || /[?？]$/u.test(reference.trim()) ? '？' : /[!！]$/u.test(text.trim()) ? '！' : '。'
 
 type Rules = Record<DialectId, Record<Direction, Array<[string, string]>>>

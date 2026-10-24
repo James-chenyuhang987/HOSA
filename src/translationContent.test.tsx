@@ -48,6 +48,12 @@ it('recognizes traditional Cantonese and keeps question intent without needing t
   expect(translate('我没有发烧？', 'cantonese', 'toDialect')?.text).toBe('我冇发烧？')
 })
 
+it('normalizes common speech transcript layout without changing clinical polarity', () => {
+  expect(translate('嗯，我 没 有 发 烧。', 'cantonese', 'toDialect')?.text).toBe('我冇发烧。')
+  expect(translate('我冇發燒', 'cantonese', 'toMandarin')?.text).toBe('我没有发烧。')
+  expect(translate('那个，检查前 要 空腹吗', 'cantonese', 'toDialect')?.text).toBe('检查之前使唔使空肚？')
+})
+
 it('does not skip an unknown clause or convert a decimal point into a sentence boundary', () => {
   for (const text of ['我头晕，昨晚吃了三片药。', '我没有发烧，但是呼吸很急促。', '体温是38.5℃。']) {
     const result = translate(text, 'cantonese', 'toDialect')!
