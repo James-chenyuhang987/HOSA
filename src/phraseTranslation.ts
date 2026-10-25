@@ -1,33 +1,9 @@
-import OpenCC from 'opencc-js/t2cn'
 import type { DialectId, Phrase } from './hospitalLexicon'
 import type { Direction, Translation } from './translationTypes'
 import { replaceWording } from './medicalLiterals'
-
-const simplify = OpenCC.Converter({ from: 't', to: 'cn' })
-const stripEnding = (text: string) => text.trim().replace(/[。！？!?；;，,、]+$/u, '')
-
-const normalizeSpeechLayout = (text: string) => text
-  .replace(/[\u200b\u200c\u200d]/gu, '')
-  .replace(/[\r\n]+/gu, '')
-  .replace(/(?<=[\p{Script=Han}])\s+(?=[\p{Script=Han}])/gu, '')
-  .replace(/\s+/gu, ' ')
-
-// Browser ASR often adds a leading filler or spaces between each Han character.
-// Strip only conversational fillers at the boundary; never remove words inside
-// the clinical sentence, where doing so could change meaning.
-const normalizeSpeechFiller = (text: string) => text.replace(/^(?:嗯+|呃+|啊+|那个|就是)[\s，,、:：-]*/u, '')
-
-// Script, punctuation and speech-layout equivalence only. Never remove negation,
-// uncertainty or quantities from the clinical sentence.
-export const normalizeForMatch = (text: string) => {
-  const simplified = simplify(normalizeSpeechFiller(normalizeSpeechLayout(text.normalize('NFC'))))
-  return stripEnding(simplified)
-    .replace(/[，、]/gu, ',')
-    .replace(/；/gu, ';')
-    .replace(/：/gu, ':')
-    .replace(/\s*([,;:])\s*/gu, '$1')
-}
-export const endingFor = (text: string, reference = '') => /[?？]$/u.test(text.trim()) || /[?？]$/u.test(reference.trim()) ? '？' : /[!！]$/u.test(text.trim()) ? '！' : '。'
+import { translateHospitalPattern } from './hospitalSentencePatterns'
+import { endingFor, normalizeForMatch, stripEnding } from './translationMatching'
+export { endingFor, normalizeForMatch } from './translationMatching'
 
 type Rules = Record<DialectId, Record<Direction, Array<[string, string]>>>
 export function createPhraseTranslator(phrases: Record<DialectId, Phrase[]>, rules: Rules, label: (id: DialectId) => string) {
@@ -57,26 +33,49 @@ export function createPhraseTranslator(phrases: Record<DialectId, Phrase[]>, rul
       confidence: 'phrase',
     }
   }
+  const segment = (text: string, dialect: DialectId, direction: Direction) => exact(text, dialect, direction)
+    ?? translateHospitalPattern(text, direction, (symptom) => indexFor(dialect, direction).get(normalizeForMatch(symptom)) ?? null)
   return (source: string, dialect: DialectId, direction: Direction): Translation | null => {
     if (!stripEnding(source)) return null
-    const single = exact(source, dialect, direction)
+    const single = segment(source, dialect, direction)
     if (single) return single
-    // Compose only when EVERY clause is covered, in its original order.
-    // Unknown clauses, conjunctions and decimal points are not discarded or guessed.
-    const parts = [...source.matchAll(/([^，,。！？!?；;\n]+)([，,。！？!?；;\n]*)/gu)]
-    if (parts.length > 1 && parts.map((part) => part[0]).join('') === source) {
-      const results = parts.map((part) => exact(part[1], dialect, direction))
-      if (results.every((result) => result !== null)) {
+    // Find complete phrases at punctuation boundaries, including phrases with
+    // their own commas. Backtrack only to another FULL covering; never skip an
+    // unknown clause, cross a sentence boundary or split decimal points.
+    const input = source.trim().replace(/\r\n?/gu, '\n')
+    const parts = [...input.matchAll(/([^，,。！？!?；;\n]+)([，,。！？!?；;\n]*)/gu)]
+    if (parts.length > 1 && parts.map((part) => part[0]).join('') === input) {
+      type Piece = { result: Translation; original: string; separator: string }
+      const covers = new Map<number, Piece[] | null>([[parts.length, []]])
+      const cover = (start: number): Piece[] | null => {
+        if (covers.has(start)) return covers.get(start)!
+        let end = start
+        while (end < parts.length - 1 && !/[。！？!?\n]/u.test(parts[end][2])) end += 1
+        for (; end >= start; end -= 1) {
+          const original = parts.slice(start, end + 1).map((part) => part[0]).join('')
+          const result = segment(original, dialect, direction)
+          if (!result) continue
+          const rest = cover(end + 1)
+          if (!rest) continue
+          const pieces = [{ result, original, separator: parts[end][2] }, ...rest]
+          covers.set(start, pieces)
+          return pieces
+        }
+        covers.set(start, null)
+        return null
+      }
+      const results = cover(0)
+      if (results) {
+        const hasTemplate = results.some(({ result }) => result.confidence === 'template')
         return {
-          text: results.map((result, index) => {
-            const separator = parts[index][2]
-            const punctuation = index === parts.length - 1 || /[。！？!?\n]/u.test(separator)
-              ? endingFor(parts[index][0], result.text) : /[；;]/u.test(separator) ? '；' : '，'
+          text: results.map(({ result, original, separator }, index) => {
+            const punctuation = index === results.length - 1 || /[。！？!?\n]/u.test(separator)
+              ? endingFor(original, result.text) : /[；;]/u.test(separator) ? '；' : '，'
             return stripEnding(result.text) + punctuation
           }).join(''),
           pronunciation: '组合短句的完整读音尚待核对。',
-          note: '按已收录短句逐句组合，保留原句顺序。请对照原文核对症状、否定和时间；方言表达仍待当地使用者核对。',
-          confidence: 'phrase',
+          note: `按已收录短句${hasTemplate ? '和症状句式' : ''}逐句组合，保留原句顺序。请对照原文核对症状、否定和时间；方言表达仍待当地使用者核对。`,
+          confidence: hasTemplate ? 'template' : 'phrase',
         }
       }
     }

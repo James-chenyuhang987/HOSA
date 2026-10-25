@@ -2,6 +2,8 @@ import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useHybridTranslation } from './useHybridTranslation'
 import type { Translation } from './translationTypes'
+import { createPhraseTranslator } from './phraseTranslation'
+import { hospitalPhrasesFor } from './hospitalLexicon'
 
 const local = vi.fn((text: string): Translation => ({ text: `${text}（参考）`, pronunciation: '', note: '', confidence: 'wording' }))
 const response = (text = '模型译文') => Response.json({ text, provider: '测试模型', needsReview: true })
@@ -79,4 +81,20 @@ it('clears both model and ASR health after a failed check', async () => {
   await act(() => result.current.check())
   expect(result.current.asr.configured).toBe(false)
   expect(result.current.models).toEqual([])
+})
+
+it('keeps a fully covered symptom pattern offline even when model translation is enabled', async () => {
+  const fetchMock = vi.fn()
+  vi.stubGlobal('fetch', fetchMock)
+  const empty = { toDialect: [], toMandarin: [] }
+  const translator = createPhraseTranslator({
+    cantonese: hospitalPhrasesFor('cantonese'), minnan: [], shanghai: [], sichuan: [], northeast: [],
+  }, { cantonese: empty, minnan: empty, shanghai: empty, sichuan: empty, northeast: empty }, () => '粤语')
+  const { result } = renderHook(() => useHybridTranslation(translator))
+  act(() => result.current.updateMode(true))
+  await act(() => result.current.run('我头痛三天了', 'cantonese', 'toDialect'))
+  expect(result.current.translation?.confidence).toBe('template')
+  expect(result.current.translation?.text).toBe('我头痛，症状时长：三天。')
+  expect(result.current.pending).toBe(false)
+  expect(fetchMock).not.toHaveBeenCalled()
 })

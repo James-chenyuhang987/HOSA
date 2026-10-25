@@ -1,7 +1,8 @@
 import type { DialectId } from './hospitalLexicon'
 
 /**
- * Public speech resources that informed the wording and recognition guidance.
+ * Public speech resources listed for future research; no trained model from
+ * these corpora is currently integrated into the offline translator.
  * These are corpora, not browser-ready translation models, so the app never
  * downloads them or sends patient audio to them.
  */

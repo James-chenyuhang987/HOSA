@@ -54,6 +54,53 @@ it('normalizes common speech transcript layout without changing clinical polarit
   expect(translate('那个，检查前 要 空腹吗', 'cantonese', 'toDialect')?.text).toBe('检查之前使唔使空肚？')
 })
 
+it('keeps substantive prefixes and line boundaries rather than guessing they are fillers', () => {
+  for (const text of ['就是我没有发烧', '那个我头痛', '我\n头痛', '我头痛\n三天了']) {
+    const result = translate(text, 'cantonese', 'toDialect')!
+    expect(result.confidence).toBe('unmatched')
+    expect(result.text).toBe(text)
+  }
+  expect(translate('  嗯，我没有发烧', 'cantonese', 'toDialect')?.text).toBe('我冇发烧。')
+  expect(translate('我头晕\n我没有发烧', 'cantonese', 'toDialect')?.text).toBe('我头晕。我冇发烧。')
+})
+
+it('recognizes complete dialect phrases with internal commas in longer conversations', () => {
+  expect(translate('唔該，兒科喺邊度？我冇發燒。', 'cantonese', 'toMandarin')?.text)
+    .toBe('请问儿科在哪里？我没有发烧。')
+  const result = translate('我恶心想吐，我没有发烧。', 'cantonese', 'toDialect')!
+  expect(result.confidence).toBe('phrase')
+  expect(translate(result.text, 'cantonese', 'toMandarin')?.text).toBe('我恶心想吐，我没有发烧。')
+  const unknown = '唔该，儿科喺边度？但我唔知自己食过乜药。'
+  expect(translate(unknown, 'cantonese', 'toMandarin')?.text).toBe(unknown)
+  expect(translate(unknown, 'cantonese', 'toMandarin')?.confidence).toBe('unmatched')
+})
+
+it.each(dialects)('keeps hospital questions, appointment changes and nausea separate in %s', (dialect) => {
+  const restore = (source: string) => translate(translate(source, dialect, 'toDialect')!.text, dialect, 'toMandarin')?.text
+  expect(restore('需要家属陪着吗')).toBe('需要家属陪同吗？')
+  expect(restore('我需要家属陪同')).toBe('我需要家属陪同。')
+  expect(restore('我想呕吐')).toBe('我想吐。')
+  expect(restore('我恶心想吐')).toBe('我恶心想吐。')
+  expect(restore('我想改预约')).toBe('我想改预约。')
+  expect(restore('我想改预约时间')).toBe('我想改预约时间。')
+  expect(restore('我吃东西后更痛')).toBe('我吃东西后更痛。')
+  expect(restore('我吃饭后更痛')).toBe('我吃饭后更痛。')
+})
+
+it('shows the symptom-pattern source and swaps a complete offline result back to Mandarin', () => {
+  render(<App />)
+  fireEvent.change(screen.getByLabelText('翻译成'), { target: { value: 'sichuan' } })
+  fireEvent.change(screen.getByLabelText('普通话内容'), { target: { value: '我头痛3天了' } })
+  fireEvent.click(screen.getByRole('button', { name: '立即翻译' }))
+  const result = screen.getByRole('complementary', { name: '翻译结果' })
+  expect(within(result).getByText('症状句式 · 待核对')).toBeInTheDocument()
+  expect(within(result).getByText('我脑壳痛，症状时长：3天。')).toBeInTheDocument()
+  expect(screen.queryByText('读法参考')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /交换翻译方向/u }))
+  expect(screen.getByLabelText('四川话内容')).toHaveValue('我脑壳痛，症状时长：3天。')
+  expect(within(result).getByText('我头痛3天了。')).toBeInTheDocument()
+})
+
 it('does not skip an unknown clause or convert a decimal point into a sentence boundary', () => {
   for (const text of ['我头晕，昨晚吃了三片药。', '我没有发烧，但是呼吸很急促。', '体温是38.5℃。']) {
     const result = translate(text, 'cantonese', 'toDialect')!

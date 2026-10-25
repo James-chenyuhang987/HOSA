@@ -1082,7 +1082,8 @@ footer {
   line-height: 1;
 }
 
-.translation-confidence.phrase {
+.translation-confidence.phrase,
+.translation-confidence.template {
   color: var(--teal);
   background: var(--teal-soft);
 }

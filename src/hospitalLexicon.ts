@@ -159,7 +159,7 @@ const baseHospitalLexicon: readonly HospitalEntry[] = [
     pronunciation: { cantonese: 'ngo5 tau4 wan4' },
   },
   {
-    source: '我想吐', category: 'symptoms', aliases: ['我觉得想吐'],
+    source: '我想吐', category: 'symptoms', aliases: ['我觉得想吐', '我想呕吐'],
     variants: {
       cantonese: '我想呕。', minnan: '我想欲吐。', shanghai: '我想吐。',
       sichuan: '我想吐。', northeast: '我想吐。',
@@ -612,7 +612,7 @@ const additionalHospitalEntries: readonly HospitalEntry[] = [
     },
   },
   {
-    source: '我恶心想吐', category: 'symptoms', aliases: ['我想呕吐'],
+    source: '我恶心想吐', category: 'symptoms',
     variants: {
       cantonese: '我作呕，想呕。', minnan: '我噁心欲吐。', shanghai: '我恶心，要呕。',
       sichuan: '我恶心，想吐。', northeast: '我恶心想吐。',
@@ -626,7 +626,7 @@ const additionalHospitalEntries: readonly HospitalEntry[] = [
     },
   },
   {
-    source: '我吃饭后更痛', category: 'symptoms', aliases: ['我吃东西后更痛'],
+    source: '我吃饭后更痛', category: 'symptoms',
     variants: {
       cantonese: '我食饭之后更加痛。', minnan: '我食飯了後閣較疼。', shanghai: '我吃饭以后更加痛。',
       sichuan: '我吃饭后更痛。', northeast: '我吃饭以后更疼。',
@@ -647,17 +647,40 @@ const additionalHospitalEntries: readonly HospitalEntry[] = [
     },
   },
   {
-    source: '我需要家属陪同', category: 'inpatient', aliases: ['需要家属陪着吗'],
+    source: '我需要家属陪同', category: 'inpatient',
     variants: {
       cantonese: '我需要家属陪住。', minnan: '我需要家屬陪伴。', shanghai: '我需要家属陪着。',
       sichuan: '我需要家属陪着。', northeast: '我得家属陪着。',
     },
   },
   {
-    source: '我想改预约时间', category: 'registration', aliases: ['我想改预约'],
+    source: '我想改预约时间', category: 'registration', aliases: ['我想更改预约时间'],
     variants: {
       cantonese: '我想改预约时间。', minnan: '我欲改預約時間。', shanghai: '我想改预约辰光。',
       sichuan: '我想改预约时间。', northeast: '我想改预约时间。',
+    },
+  },
+  {
+    source: '需要家属陪同吗', category: 'inpatient', aliases: ['需要家属陪着吗'],
+    variants: {
+      cantonese: '需唔需要家属陪住？', minnan: '需要家屬陪伴無？', shanghai: '需要家属陪着伐？',
+      sichuan: '需不需要家属陪着？', northeast: '用家属陪着不？',
+    },
+    note: '此句询问是否要求家属陪同，不表示已经需要陪同，也不表示家属已经在场。',
+  },
+  {
+    source: '我想改预约', category: 'registration', aliases: ['我想更改预约'],
+    variants: {
+      cantonese: '我想改预约。', minnan: '我欲改預約。', shanghai: '我想改预约。',
+      sichuan: '我想改预约。', northeast: '我想改预约。',
+    },
+    note: '只表达想更改预约，不推断要更改的是时间、医生还是科室。',
+  },
+  {
+    source: '我吃东西后更痛', category: 'symptoms',
+    variants: {
+      cantonese: '我食嘢之后更加痛。', minnan: '我食物件了後閣較疼。', shanghai: '我吃东西以后更加痛。',
+      sichuan: '我吃东西后更痛。', northeast: '我吃东西以后更疼。',
     },
   },
   {

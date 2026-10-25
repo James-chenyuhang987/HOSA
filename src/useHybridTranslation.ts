@@ -83,7 +83,7 @@ export function useHybridTranslation(localTranslate: LocalTranslator) {
     const local = localTranslate(input.text, dialect, direction)
     setTranslation(local)
     if (!local) return
-    if (local.confidence === 'phrase' || !enabled) { remember(local); return }
+    if (local.confidence === 'phrase' || local.confidence === 'template' || !enabled) { remember(local); return }
     if (knownDialects.current && !knownDialects.current.has(dialect)) {
       setNotice('当前方言暂未接入整句翻译，已保留词库参考。')
       return

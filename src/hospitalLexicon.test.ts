@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { hospitalLexicon, hospitalPhrasesFor } from './hospitalLexicon'
 import type { DialectId } from './hospitalLexicon'
+import { normalizeForMatch } from './translationMatching'
 
 const dialects: DialectId[] = ['cantonese', 'minnan', 'shanghai', 'sichuan', 'northeast']
-const normalized = (value: string) => value.trim().replace(/[。！？!?]+$/u, '')
+const normalized = normalizeForMatch
 
 describe('hospital lexicon integrity', () => {
   it('keeps every input and its aliases unambiguous', () => {

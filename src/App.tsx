@@ -1371,7 +1371,7 @@ function App() {
     archiveCurrent()
     if (voice.active) voice.cancel()
     const next = direction === 'toDialect' ? 'toMandarin' : 'toDialect'
-    const nextText = translation && !stale && ['phrase', 'model'].includes(translation.confidence)
+    const nextText = translation && !stale && isCompleteTranslation(translation)
       ? translation.text : sourceText
     setDirection(next)
     setSourceText(nextText)

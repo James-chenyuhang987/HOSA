@@ -1,7 +1,7 @@
 import type { DialectId } from './hospitalLexicon'
 
 export type Direction = 'toDialect' | 'toMandarin'
-export type TranslationConfidence = 'phrase' | 'wording' | 'unmatched' | 'model'
+export type TranslationConfidence = 'phrase' | 'template' | 'wording' | 'unmatched' | 'model'
 export type Translation = {
   text: string
   pronunciation: string
