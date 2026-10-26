@@ -121,6 +121,19 @@ it('auto-translates a timed negative statement and preserves it when the directi
   expect(within(result).getByText('我今天没有发烧。')).toBeInTheDocument()
 })
 
+it('translates a chosen event-count example and keeps the count when swapping direction', () => {
+  render(<App />)
+  fireEvent.change(screen.getByLabelText('翻译成'), { target: { value: 'cantonese' } })
+  fireEvent.click(screen.getByRole('button', { name: '打开症状短句' }))
+  fireEvent.click(screen.getByRole('button', { name: '我今天吐了三次' }))
+  const result = screen.getByRole('complementary', { name: '翻译结果' })
+  expect(screen.getByLabelText('普通话内容')).toHaveValue('我今天吐了三次')
+  expect(within(result).getByText('我已经呕咗，呕吐次数：三次，时间范围：今天。')).toBeInTheDocument()
+  expect(within(result).getByText('医院句式 · 待核对')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /交换翻译方向/u }))
+  expect(within(result).getByText('我今天吐了三次。')).toBeInTheDocument()
+})
+
 it('does not skip an unknown clause or convert a decimal point into a sentence boundary', () => {
   for (const text of ['我头晕，昨晚吃了三片药。', '我没有发烧，但是呼吸很急促。', '体温是38.5℃。']) {
     const result = translate(text, 'cantonese', 'toDialect')!

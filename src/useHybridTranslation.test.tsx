@@ -83,7 +83,11 @@ it('clears both model and ASR health after a failed check', async () => {
   expect(result.current.models).toEqual([])
 })
 
-it('keeps a fully covered symptom pattern offline even when model translation is enabled', async () => {
+it.each([
+  ['我头痛三天了', '我头痛，症状时长：三天。'],
+  ['我今天吐了三次', '我已经呕咗，呕吐次数：三次，时间范围：今天。'],
+  ['我昨天拉了两次肚子', '我肚屙，腹泻次数：两次，时间范围：昨天。'],
+])('keeps a fully covered hospital pattern offline even with models enabled: %s', async (source, expected) => {
   const fetchMock = vi.fn()
   vi.stubGlobal('fetch', fetchMock)
   const empty = { toDialect: [], toMandarin: [] }
@@ -92,9 +96,9 @@ it('keeps a fully covered symptom pattern offline even when model translation is
   }, { cantonese: empty, minnan: empty, shanghai: empty, sichuan: empty, northeast: empty }, () => '粤语')
   const { result } = renderHook(() => useHybridTranslation(translator))
   act(() => result.current.updateMode(true))
-  await act(() => result.current.run('我头痛三天了', 'cantonese', 'toDialect'))
+  await act(() => result.current.run(source, 'cantonese', 'toDialect'))
   expect(result.current.translation?.confidence).toBe('template')
-  expect(result.current.translation?.text).toBe('我头痛，症状时长：三天。')
+  expect(result.current.translation?.text).toBe(expected)
   expect(result.current.pending).toBe(false)
   expect(fetchMock).not.toHaveBeenCalled()
 })

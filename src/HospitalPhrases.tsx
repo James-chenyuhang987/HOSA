@@ -9,7 +9,7 @@ const categories = [
   ['examination', '检查'], ['medication', '用药'], ['inpatient', '住院'], ['communication', '沟通'],
 ] as const
 const normalize = (value: string) => normalizeForMatch(value.normalize('NFKC')).toLowerCase().replace(/\s+/gu, '')
-const timedExamples = ['我今天没有发烧', '我头痛大约三天了', '我从昨晚开始头晕']
+const timedExamples = ['我今天没有发烧', '我头痛大约三天了', '我从昨晚开始头晕', '我今天吐了三次']
 
 export default function HospitalPhrases({ dialect, direction, onChoose, quick, prominent = false }: {
   dialect: DialectId; direction: Direction; onChoose: (text: string) => void; quick: string[]; prominent?: boolean
@@ -58,7 +58,7 @@ export default function HospitalPhrases({ dialect, direction, onChoose, quick, p
         </span></button>)}
     </div>
     {!keyword && category === 'symptoms' && direction === 'toDialect' && <div className="phrase-time-examples">
-      <p>补上时间，更方便说清症状</p>
+      <p>补上时间和次数，更方便说清症状</p>
       <div className="examples" role="group" aria-label="带时间的症状示例">
         {timedExamples.map((text) => <button type="button" key={text} onClick={() => onChoose(text)}>{text}</button>)}
       </div>
