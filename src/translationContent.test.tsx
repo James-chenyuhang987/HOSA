@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
 import { hospitalLexicon, hospitalPhrasesFor } from './hospitalLexicon'
@@ -93,12 +93,32 @@ it('shows the symptom-pattern source and swaps a complete offline result back to
   fireEvent.change(screen.getByLabelText('普通话内容'), { target: { value: '我头痛3天了' } })
   fireEvent.click(screen.getByRole('button', { name: '立即翻译' }))
   const result = screen.getByRole('complementary', { name: '翻译结果' })
-  expect(within(result).getByText('症状句式 · 待核对')).toBeInTheDocument()
+  expect(within(result).getByText('医院句式 · 待核对')).toBeInTheDocument()
   expect(within(result).getByText('我脑壳痛，症状时长：3天。')).toBeInTheDocument()
   expect(screen.queryByText('读法参考')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /交换翻译方向/u }))
   expect(screen.getByLabelText('四川话内容')).toHaveValue('我脑壳痛，症状时长：3天。')
   expect(within(result).getByText('我头痛3天了。')).toBeInTheDocument()
+})
+
+it.each(dialects)('keeps an intrinsic question visible before a subsequent statement in %s', (dialect) => {
+  const source = '需要家属陪同吗，我还没有吃药。'
+  const result = translate(source, dialect, 'toDialect')!
+  expect(result.confidence).toBe('phrase')
+  expect(result.text).toContain('？')
+  expect(translate(result.text, dialect, 'toMandarin')?.text).toBe('需要家属陪同吗？我还没有吃药。')
+})
+
+it('auto-translates a timed negative statement and preserves it when the direction is swapped', () => {
+  render(<App />)
+  fireEvent.change(screen.getByLabelText('翻译成'), { target: { value: 'cantonese' } })
+  fireEvent.change(screen.getByLabelText('普通话内容'), { target: { value: '我今天没有发烧' } })
+  act(() => { vi.advanceTimersByTime(800) })
+  const result = screen.getByRole('complementary', { name: '翻译结果' })
+  expect(within(result).getByText('医院句式 · 待核对')).toBeInTheDocument()
+  expect(within(result).getByText('我冇发烧，时间范围：今天。')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /交换翻译方向/u }))
+  expect(within(result).getByText('我今天没有发烧。')).toBeInTheDocument()
 })
 
 it('does not skip an unknown clause or convert a decimal point into a sentence boundary', () => {

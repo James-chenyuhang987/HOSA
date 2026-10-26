@@ -69,12 +69,12 @@ export function createPhraseTranslator(phrases: Record<DialectId, Phrase[]>, rul
         const hasTemplate = results.some(({ result }) => result.confidence === 'template')
         return {
           text: results.map(({ result, original, separator }, index) => {
-            const punctuation = index === results.length - 1 || /[。！？!?\n]/u.test(separator)
+            const punctuation = /[?？]$/u.test(result.text) ? '？' : index === results.length - 1 || /[。！？!?\n]/u.test(separator)
               ? endingFor(original, result.text) : /[；;]/u.test(separator) ? '；' : '，'
             return stripEnding(result.text) + punctuation
           }).join(''),
           pronunciation: '组合短句的完整读音尚待核对。',
-          note: `按已收录短句${hasTemplate ? '和症状句式' : ''}逐句组合，保留原句顺序。请对照原文核对症状、否定和时间；方言表达仍待当地使用者核对。`,
+          note: `按已收录短句${hasTemplate ? '和医院句式' : ''}逐句组合，保留原句顺序。${hasTemplate ? '时间范围只限定对应分句，不代表症状开始时间。' : ''}请对照原文核对症状、否定和时间；方言表达仍待当地使用者核对。`,
           confidence: hasTemplate ? 'template' : 'phrase',
         }
       }

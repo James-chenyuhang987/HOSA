@@ -63,3 +63,18 @@ it('clears a search when a scene is chosen and can show the whole library', () =
   expect(screen.getByRole('button', { name: '我头晕' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '这个药一天吃几次' })).toBeInTheDocument()
 })
+
+it('offers usable time examples for Mandarin symptom input and hides them during reverse translation', () => {
+  const choose = vi.fn()
+  const view = render(<HospitalPhrases dialect="sichuan" direction="toDialect" onChoose={choose} quick={[]} />)
+  openLibrary()
+  fireEvent.click(screen.getByRole('button', { name: '症状' }))
+  expect(screen.getByRole('group', { name: '带时间的症状示例' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '我头痛大约三天了' }))
+  expect(choose).toHaveBeenCalledExactlyOnceWith('我头痛大约三天了')
+  search('头晕')
+  expect(screen.queryByRole('group', { name: '带时间的症状示例' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '症状' }))
+  view.rerender(<HospitalPhrases dialect="sichuan" direction="toMandarin" onChoose={choose} quick={[]} />)
+  expect(screen.queryByRole('group', { name: '带时间的症状示例' })).not.toBeInTheDocument()
+})
