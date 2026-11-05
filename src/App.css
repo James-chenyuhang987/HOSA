@@ -1692,6 +1692,7 @@ footer { font-size: 12px; }
 .phrase-search-status { margin: 0 0 6px; }
 .phrase-time-examples { margin: 12px 0 16px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--teal-soft); }
 .phrase-time-examples > p { margin: 0; color: var(--teal-deep); font: 14px/1.7 var(--sans); }
+.phrase-time-examples .phrase-measurement-label { margin-top: 10px; color: var(--muted); font-size: 13px; }
 .phrase-time-examples .examples { margin-bottom: 0; }
 .phrase-search-empty { padding: 8px 0 18px; font: 14px/1.7 var(--sans); }
 .phrase-search-empty p { color: var(--muted); }

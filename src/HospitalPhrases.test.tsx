@@ -74,6 +74,8 @@ it('offers usable time examples for Mandarin symptom input and hides them during
   expect(choose).toHaveBeenCalledExactlyOnceWith('我头痛大约三天了')
   fireEvent.click(screen.getByRole('button', { name: '我今天吐了三次' }))
   expect(choose).toHaveBeenLastCalledWith('我今天吐了三次')
+  fireEvent.click(screen.getByRole('button', { name: '我的血压是125/80mmHg' }))
+  expect(choose).toHaveBeenLastCalledWith('我的血压是125/80mmHg')
   search('头晕')
   expect(screen.queryByRole('group', { name: '带时间的症状示例' })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '症状' }))

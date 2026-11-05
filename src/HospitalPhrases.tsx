@@ -10,6 +10,7 @@ const categories = [
 ] as const
 const normalize = (value: string) => normalizeForMatch(value.normalize('NFKC')).toLowerCase().replace(/\s+/gu, '')
 const timedExamples = ['我今天没有发烧', '我头痛大约三天了', '我从昨晚开始头晕', '我今天吐了三次']
+const measurementExamples = ['我的体温是38.5℃', '我的血压是125/80mmHg', '我的疼痛评分是7分']
 
 export default function HospitalPhrases({ dialect, direction, onChoose, quick, prominent = false }: {
   dialect: DialectId; direction: Direction; onChoose: (text: string) => void; quick: string[]; prominent?: boolean
@@ -58,9 +59,13 @@ export default function HospitalPhrases({ dialect, direction, onChoose, quick, p
         </span></button>)}
     </div>
     {!keyword && category === 'symptoms' && direction === 'toDialect' && <div className="phrase-time-examples">
-      <p>补上时间和次数，更方便说清症状</p>
+      <p>补上时间、次数和关键数值，更方便说清症状</p>
       <div className="examples" role="group" aria-label="带时间的症状示例">
         {timedExamples.map((text) => <button type="button" key={text} onClick={() => onChoose(text)}>{text}</button>)}
+      </div>
+      <p className="phrase-measurement-label">体温、血压和疼痛评分会保留原数字</p>
+      <div className="examples" role="group" aria-label="关键数值示例">
+        {measurementExamples.map((text) => <button type="button" key={text} onClick={() => onChoose(text)}>{text}</button>)}
       </div>
     </div>}
     <p className="phrase-search-status" role="status">{keyword ? `搜索结果：${entries.length} 条短句` : `当前场景：${entries.length} 条短句`}</p>

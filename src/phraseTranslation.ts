@@ -3,6 +3,7 @@ import type { Direction, Translation } from './translationTypes'
 import { replaceWording } from './medicalLiterals'
 import { translateHospitalPattern } from './hospitalSentencePatterns'
 import { translateHospitalEventPattern } from './hospitalEventPatterns'
+import { translateHospitalMeasurementPattern } from './hospitalMeasurementPatterns'
 import { endingFor, normalizeForMatch, stripEnding } from './translationMatching'
 export { endingFor, normalizeForMatch } from './translationMatching'
 
@@ -37,6 +38,7 @@ export function createPhraseTranslator(phrases: Record<DialectId, Phrase[]>, rul
   const segment = (text: string, dialect: DialectId, direction: Direction) => exact(text, dialect, direction)
     ?? translateHospitalPattern(text, direction, (symptom) => indexFor(dialect, direction).get(normalizeForMatch(symptom)) ?? null)
     ?? translateHospitalEventPattern(text, direction, (statement) => indexFor(dialect, direction).get(normalizeForMatch(statement)) ?? null)
+    ?? translateHospitalMeasurementPattern(text, direction)
   return (source: string, dialect: DialectId, direction: Direction): Translation | null => {
     if (!stripEnding(source)) return null
     const single = segment(source, dialect, direction)

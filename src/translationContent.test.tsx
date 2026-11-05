@@ -134,6 +134,18 @@ it('translates a chosen event-count example and keeps the count when swapping di
   expect(within(result).getByText('我今天吐了三次。')).toBeInTheDocument()
 })
 
+it('keeps vital signs and pain scores as exact written values', () => {
+  render(<App />)
+  fireEvent.change(screen.getByLabelText('翻译成'), { target: { value: 'sichuan' } })
+  fireEvent.change(screen.getByLabelText('普通话内容'), { target: { value: '我的体温是38.5℃' } })
+  fireEvent.click(screen.getByRole('button', { name: '立即翻译' }))
+  const result = screen.getByRole('complementary', { name: '翻译结果' })
+  expect(within(result).getByText('体温：38.5℃。')).toBeInTheDocument()
+  expect(within(result).getByText('医院句式 · 待核对')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /交换翻译方向/u }))
+  expect(within(result).getByText('我的体温是38.5℃。')).toBeInTheDocument()
+})
+
 it('does not skip an unknown clause or convert a decimal point into a sentence boundary', () => {
   for (const text of ['我头晕，昨晚吃了三片药。', '我没有发烧，但是呼吸很急促。', '体温是38.5℃。']) {
     const result = translate(text, 'cantonese', 'toDialect')!
