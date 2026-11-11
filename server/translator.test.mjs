@@ -115,6 +115,35 @@ test('uses OpenAI-compatible completions for MiLMMT and chat for Hy-MT', async (
   assert.ok(requests[1].body.prompt)
 })
 
+test('sends a DeepSeek-compatible chat request with the key kept in the backend', async () => {
+  let recorded
+  const deepseek = {
+    ...model, id: 'deepseek', label: 'DeepSeek Chat', enabled: true, runtime: 'openai',
+    profile: 'general', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat',
+    apiKeyEnv: 'DEEPSEEK_API_KEY',
+  }
+  await callModel(deepseek, buildPrompt(deepseek, input), new AbortController().signal,
+    async (url, options) => {
+      recorded = { url, headers: options.headers, body: JSON.parse(options.body) }
+      return Response.json({ choices: [{ finish_reason: 'stop', message: { content: '我由琴晚开始头晕，今日又呕咗。' } }] })
+    }, { DEEPSEEK_API_KEY: 'sk-test-deepseek-key' })
+  assert.equal(recorded.url, 'https://api.deepseek.com/v1/chat/completions')
+  assert.equal(recorded.headers.Authorization, 'Bearer sk-test-deepseek-key')
+  assert.equal(recorded.body.model, 'deepseek-chat')
+  assert.equal(recorded.body.stream, false)
+  assert.ok(recorded.body.messages)
+})
+
+test('refuses a configured DeepSeek request when its backend key is missing', async () => {
+  const deepseek = {
+    ...model, runtime: 'openai', profile: 'general', baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-chat', apiKeyEnv: 'DEEPSEEK_API_KEY',
+  }
+  await assert.rejects(callModel(deepseek, buildPrompt(deepseek, input), new AbortController().signal,
+    async () => Response.json({ choices: [{ message: { content: '不应调用' } }] }), {}),
+  (error) => error.code === 'MODEL_KEY_MISSING')
+})
+
 test('never continues the fallback chain after cancellation', async () => {
   const controller = new AbortController()
   let calls = 0

@@ -55,6 +55,29 @@ test('loads optional local ASR settings without exposing a default remote servic
   assert.equal((await loadConfig({})).asr, undefined)
 })
 
+test('enables the built-in DeepSeek route only when explicitly requested with a backend key', async () => {
+  const config = await loadConfig({
+    HOSA_MODEL_CONFIG: 'server/models.example.json',
+    HOSA_DEEPSEEK_ENABLED: '1',
+    DEEPSEEK_API_KEY: 'sk-test-deepseek-key',
+    HOSA_DEEPSEEK_MODEL: 'deepseek-chat',
+  })
+  const model = config.models.find((entry) => entry.id === 'deepseek')
+  assert.deepEqual(model, {
+    id: 'deepseek', label: 'DeepSeek Chat（可选）', enabled: true,
+    runtime: 'openai', profile: 'general', baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-chat', apiKeyEnv: 'DEEPSEEK_API_KEY', dialects: ['cantonese', 'minnan', 'shanghai', 'sichuan', 'northeast'],
+  })
+  assert.equal(config.routes.sichuan[0], 'deepseek')
+})
+
+test('does not allow DeepSeek to start without its backend-only key', async () => {
+  await assert.rejects(loadConfig({
+    HOSA_MODEL_CONFIG: 'server/models.example.json',
+    HOSA_DEEPSEEK_ENABLED: '1',
+  }), /DEEPSEEK_API_KEY/u)
+})
+
 test('rejects unsafe ASR endpoints and limits', async () => {
   await assert.rejects(loadConfig({ HOSA_ASR_URL: 'http://user:pass@127.0.0.1:9000/v1' }))
   await assert.rejects(loadConfig({ HOSA_ASR_TIMEOUT_MS: '100' }))

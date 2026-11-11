@@ -77,8 +77,9 @@
 - MiLMMT：粤语，按官方语言名称构造原始 completion 模板，使用翻译版权重。
 - Taigi：台湾台语，completion `[TRANS]` / `[HAN]` / `[ZH]` 模板；OpenCC 只做输入字形转换。
 - 通用模型：其余方言或备用模型，chat 模板；质量按选用模型评估。
+- DeepSeek Chat：远程 OpenAI 兼容 chat 模型；仅在后端明确设置 `HOSA_DEEPSEEK_ENABLED=1` 和 `DEEPSEEK_API_KEY` 后加入各方言备用路由。
 
-Ollama 使用 `/api/chat` 或 `/api/generate`，后者开启 `raw: true`。兼容运行时使用 `/v1/chat/completions` 或 `/v1/completions`。请求非流式，最多生成 640 tokens。模型服务密钥只从后端环境变量读取。
+Ollama 使用 `/api/chat` 或 `/api/generate`，后者开启 `raw: true`。兼容运行时使用 `/v1/chat/completions` 或 `/v1/completions`。DeepSeek 默认使用 `https://api.deepseek.com/v1/chat/completions` 和 `deepseek-chat`。请求非流式，最多生成 640 tokens。模型服务密钥只从后端环境变量读取。
 
 ## 医院场景检查与边界
 

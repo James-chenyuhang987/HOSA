@@ -8,16 +8,51 @@ const profileDialects = {
 
 const SAFE_TOKEN = /^[\x21-\x7e]{1,256}$/u
 
-function validateToken(token, required) {
+function validateToken(token, required, name = 'HOSA_API_TOKEN') {
   if (!token) {
-    if (required) throw new Error('公网分享或非本机监听时，请设置至少 24 字符的 HOSA_API_TOKEN。')
+    if (required) throw new Error(`公网分享或非本机监听时，请设置至少 24 字符的 ${name}。`)
     return
   }
   if (!SAFE_TOKEN.test(token) || (required && token.length < 24)) {
     throw new Error(required
-      ? 'HOSA_API_TOKEN 只能使用 24 到 256 个可打印字符，不能包含空格或换行。'
-      : 'HOSA_API_TOKEN 只能使用最多 256 个可打印字符，不能包含空格或换行。')
+      ? `${name} 只能使用 24 到 256 个可打印字符，不能包含空格或换行。`
+      : `${name} 只能使用最多 256 个可打印字符，不能包含空格或换行。`)
   }
+}
+
+const deepSeekDefaults = {
+  id: 'deepseek', label: 'DeepSeek Chat', enabled: false,
+  runtime: 'openai', profile: 'general',
+  baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat',
+  apiKeyEnv: 'DEEPSEEK_API_KEY',
+}
+
+function addDeepSeekModel(data, env) {
+  if (env.HOSA_DEEPSEEK_ENABLED !== '1') return data
+  const apiKey = env.DEEPSEEK_API_KEY || ''
+  validateToken(apiKey, false, 'DEEPSEEK_API_KEY')
+  if (!apiKey) throw new Error('启用 DeepSeek 前，请在后端环境变量中设置 DEEPSEEK_API_KEY。')
+  const modelName = env.HOSA_DEEPSEEK_MODEL?.trim() || deepSeekDefaults.model
+  if (!/^[^\r\n]{1,200}$/u.test(modelName)) throw new Error('HOSA_DEEPSEEK_MODEL 配置不合法。')
+
+  const models = [...data.models]
+  const existing = models.find((model) => model.id === deepSeekDefaults.id)
+  if (existing) {
+    existing.enabled = true
+    existing.apiKeyEnv = 'DEEPSEEK_API_KEY'
+    existing.model = modelName
+  } else {
+    models.push({ ...deepSeekDefaults, model: modelName, enabled: true })
+  }
+  const routes = Object.fromEntries(Object.entries(data.routes).map(([dialect, route]) => {
+    if (!Array.isArray(route)) return [dialect, route]
+    if (route.includes(deepSeekDefaults.id)) return [dialect, route]
+    const fallbackIndex = route.indexOf('general')
+    const next = [...route]
+    next.splice(fallbackIndex === -1 ? next.length : fallbackIndex, 0, deepSeekDefaults.id)
+    return [dialect, next]
+  }))
+  return { ...data, models, routes }
 }
 
 function parseOrigins(value) {
@@ -116,7 +151,7 @@ export async function loadConfig(env = process.env) {
     || 'http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:4173,http://localhost:4173')
   for (const hostname of ['127.0.0.1', 'localhost', '[::1]']) allowedOrigins.add(`http://${hostname}:${port}`)
   return {
-    ...validateModelConfig(JSON.parse(data)), host, token,
+    ...validateModelConfig(addDeepSeekModel(JSON.parse(data), env)), host, token,
     port,
     asr,
     asrTimeoutMs: integer(env, 'HOSA_ASR_TIMEOUT_MS', 45_000, 1_000, 80_000),
