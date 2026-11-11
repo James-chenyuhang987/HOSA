@@ -56,6 +56,8 @@ DEEPSEEK_API_KEY=sk-你的密钥
 
 平台如果只提供 `PORT`，后端会自动使用它；也可以显式设置 `HOSA_PORT`。部署后把页面连接地址设为后端域名加 `/api`，例如 `https://api.example.com/api`，再输入 `HOSA_API_TOKEN`。API Key 只放在托管平台的 Secret/Environment Variables 中。不要把它放进 GitHub 仓库、前端构建变量或 URL。
 
+仓库根目录的 `render.yaml` 已提供 Render Blueprint。连接 GitHub 仓库后选择 **New → Blueprint**，Render 会自动读取 Dockerfile 和环境变量；创建时只会要求输入 `DEEPSEEK_API_KEY`，`HOSA_API_TOKEN` 由 Render 自动生成。部署完成后，用服务的 HTTPS 地址加 `/api` 连接前端。
+
 如果 M5 Max 有足够内存并希望提高粤语整句质量，可把示例配置中的 `hy-mt2-7b` 改为 `enabled: true`，并先执行 `ollama pull hf.co/tencent/Hy-MT2-7B-GGUF:Q4_K_M`。它位于 1.8B 后备路由，加载和响应会更慢；不要同时启用多个大模型，先用医院场景句子逐条核对。
 
 ## 接入本地方言 ASR

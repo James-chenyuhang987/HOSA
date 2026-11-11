@@ -102,6 +102,8 @@ DEEPSEEK_API_KEY=sk-你的密钥
 
 部署成功后，在网页“翻译设置”中填写后端的 `https://你的域名/api` 和 `HOSA_API_TOKEN`。API Key 只保存在后端托管平台的 Secret/Environment Variables 中，不能放进 GitHub Actions、`VITE_*` 变量、网页代码或聊天消息。GitHub Pages 仍然只负责静态前端；没有后端时，基础词库翻译照常工作。
 
+仓库还提供了 [Render Blueprint](render.yaml)。在 Render 中选择 **New → Blueprint** 并连接这个 GitHub 仓库，Render 会读取该文件创建后端；创建时只需要填写 `DEEPSEEK_API_KEY`，`HOSA_API_TOKEN` 会自动生成。Render 部署完成后，把它提供的 HTTPS 地址加上 `/api` 填回网页设置。
+
 如果以后确实需要让其他人调用你电脑上的模型，才使用 `cloudflared` 和 `npm run server:share`；这不是 GitHub Pages 的必需步骤。它会启动带访问凭证的分享后端和临时 HTTPS 隧道，模型需先在本机部署，详见[可选的电脑 API 服务器指南](docs/computer-api-server.md)。
 
 ## 质量检查

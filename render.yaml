@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: hosa-translation-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /HOSA/
+    envVars:
+      - key: HOSA_HOST
+        value: 0.0.0.0
+      - key: HOSA_ALLOWED_ORIGINS
+        value: https://james-chenyuhang987.github.io
+      - key: HOSA_DEEPSEEK_ENABLED
+        value: "1"
+      - key: HOSA_API_TOKEN
+        generateValue: true
+      - key: DEEPSEEK_API_KEY
+        sync: false
