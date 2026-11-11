@@ -42,6 +42,20 @@ HOSA_DEEPSEEK_MODEL=deepseek-chat
 
 如果使用的是已有的 `server/models.local.json`，不必手工把 API Key 写进模型 JSON；明确设置 `HOSA_DEEPSEEK_ENABLED=1` 后，后端会自动把 DeepSeek 加入五种方言的备用路由。不要把 `server/.env` 或 API Key 提交到 GitHub。
 
+### 让 GitHub Pages 使用远程后端
+
+GitHub Pages 不能运行 Node 后端，也不适合保存 DeepSeek Key。项目提供根目录 `Dockerfile`，可部署到任意支持 Docker 和 HTTPS 的服务。至少配置：
+
+```bash
+HOSA_HOST=0.0.0.0
+HOSA_API_TOKEN=一段至少24字符的随机凭证
+HOSA_ALLOWED_ORIGINS=https://james-chenyuhang987.github.io
+HOSA_DEEPSEEK_ENABLED=1
+DEEPSEEK_API_KEY=sk-你的密钥
+```
+
+平台如果只提供 `PORT`，后端会自动使用它；也可以显式设置 `HOSA_PORT`。部署后把页面连接地址设为后端域名加 `/api`，例如 `https://api.example.com/api`，再输入 `HOSA_API_TOKEN`。API Key 只放在托管平台的 Secret/Environment Variables 中。不要把它放进 GitHub 仓库、前端构建变量或 URL。
+
 如果 M5 Max 有足够内存并希望提高粤语整句质量，可把示例配置中的 `hy-mt2-7b` 改为 `enabled: true`，并先执行 `ollama pull hf.co/tencent/Hy-MT2-7B-GGUF:Q4_K_M`。它位于 1.8B 后备路由，加载和响应会更慢；不要同时启用多个大模型，先用医院场景句子逐条核对。
 
 ## 接入本地方言 ASR

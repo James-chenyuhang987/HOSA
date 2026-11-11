@@ -134,7 +134,7 @@ export async function loadConfig(env = process.env) {
   const host = env.HOSA_HOST || '127.0.0.1'
   const token = env.HOSA_API_TOKEN || ''
   validateToken(token, env.HOSA_PUBLIC_MODE === '1' || !['127.0.0.1', 'localhost', '::1'].includes(host))
-  const port = integer(env, 'HOSA_PORT', 8787, 1, 65535)
+  const port = integer(env, 'HOSA_PORT', env.PORT || 8787, 1, 65535)
   const asrUrl = optionalUrl(env.HOSA_ASR_URL?.trim(), 'HOSA_ASR_URL')
   const asrToken = env.HOSA_ASR_TOKEN || ''
   validateToken(asrToken, false)

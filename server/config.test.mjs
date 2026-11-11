@@ -10,6 +10,12 @@ test('allows the local hosted frontend on a custom port', async () => {
   assert.ok(!config.allowedOrigins.includes('http://127.0.0.1:8787'))
 })
 
+test('accepts the hosting platform PORT when HOSA_PORT is not set', async () => {
+  const config = await loadConfig({ PORT: '8899', HOSA_ALLOWED_ORIGINS: 'https://example.test' })
+  assert.equal(config.port, 8899)
+  assert.ok(config.allowedOrigins.includes('http://127.0.0.1:8899'))
+})
+
 test('requires a connection token for non-loopback listening', async () => {
   await assert.rejects(loadConfig({ HOSA_HOST: '0.0.0.0' }))
   const config = await loadConfig({ HOSA_HOST: '0.0.0.0', HOSA_API_TOKEN: 'test-long-connection-token' })
