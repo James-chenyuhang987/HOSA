@@ -209,7 +209,13 @@ export async function probeModel(model, fetchImpl = fetch, signal = new AbortCon
     }))
     const names = model.runtime === 'ollama' ? data.models?.map((entry) => entry.name) : data.data?.map((entry) => entry.id)
     return Boolean(names?.some((name) => name === model.model || name === `${model.model}:latest`))
-  } catch { return false }
+  } catch {
+    // Some OpenAI-compatible gateways (including DeepSeek deployments) do not
+    // expose a models listing even though chat completions are available. A
+    // configured credential is enough for the lightweight service check; the
+    // separate `probe=1` path still runs a real translation probe.
+    return Boolean(model.runtime === 'openai' && model.apiKeyEnv && process.env[model.apiKeyEnv])
+  }
 }
 
 export async function probeModelTranslation(model, fetchImpl = fetch, signal = new AbortController().signal, timeoutMs = 15_000) {
