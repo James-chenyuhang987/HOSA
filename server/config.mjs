@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import exampleModels from './models.example.json' with { type: 'json' }
 
 export const dialects = ['cantonese', 'minnan', 'shanghai', 'sichuan', 'northeast']
 const profileDialects = {
@@ -129,8 +130,11 @@ export async function loadConfig(env = process.env) {
     data = await readFile(resolve(configPath), 'utf8')
   } catch (error) {
     if (env.HOSA_MODEL_CONFIG || error.code !== 'ENOENT') throw error
-    data = await readFile(new URL('./models.example.json', import.meta.url), 'utf8')
+    // Keep the fallback model table statically bundled for serverless runtimes.
+    // Vercel's file tracer cannot always infer files accessed through readFile.
+    data = exampleModels
   }
+  if (typeof data === 'string') data = JSON.parse(data)
   const host = env.HOSA_HOST || '127.0.0.1'
   const token = env.HOSA_API_TOKEN || ''
   validateToken(token, env.HOSA_PUBLIC_MODE === '1' || !['127.0.0.1', 'localhost', '::1'].includes(host))
@@ -151,7 +155,7 @@ export async function loadConfig(env = process.env) {
     || 'http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:4173,http://localhost:4173')
   for (const hostname of ['127.0.0.1', 'localhost', '[::1]']) allowedOrigins.add(`http://${hostname}:${port}`)
   return {
-    ...validateModelConfig(addDeepSeekModel(JSON.parse(data), env)), host, token,
+    ...validateModelConfig(addDeepSeekModel(data, env)), host, token,
     port,
     asr,
     asrTimeoutMs: integer(env, 'HOSA_ASR_TIMEOUT_MS', 45_000, 1_000, 80_000),
