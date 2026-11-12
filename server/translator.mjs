@@ -208,7 +208,11 @@ export async function probeModel(model, fetchImpl = fetch, signal = new AbortCon
       headers: key ? { Authorization: `Bearer ${key}` } : {}, signal: AbortSignal.any([signal, AbortSignal.timeout(2500)]),
     }))
     const names = model.runtime === 'ollama' ? data.models?.map((entry) => entry.name) : data.data?.map((entry) => entry.id)
-    return Boolean(names?.some((name) => name === model.model || name === `${model.model}:latest`))
+    if (names?.some((name) => name === model.model || name === `${model.model}:latest`)) return true
+    // OpenAI-compatible gateways can return a valid model catalog with a
+    // provider-specific id. The configured backend owns the model name, so a
+    // successful authenticated catalog response is still a usable service.
+    return Boolean(model.runtime === 'openai' && model.apiKeyEnv && key)
   } catch {
     // Some OpenAI-compatible gateways (including DeepSeek deployments) do not
     // expose a models listing even though chat completions are available. A
