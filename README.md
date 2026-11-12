@@ -104,6 +104,8 @@ DEEPSEEK_API_KEY=sk-你的密钥
 
 仓库还提供了 [Render Blueprint](render.yaml)。在 Render 中选择 **New → Blueprint** 并连接这个 GitHub 仓库，Render 会读取该文件创建后端；创建时只需要填写 `DEEPSEEK_API_KEY`，`HOSA_API_TOKEN` 会自动生成。Render 部署完成后，把它提供的 HTTPS 地址加上 `/api` 填回网页设置。
 
+如果没有信用卡，使用 Vercel Hobby 部署更合适。仓库已经提供 `api/health.mjs`、`api/translate.mjs` 和 `vercel.json`，连接 GitHub 仓库后会自动创建两个 API 函数。部署时在 Vercel 环境变量中填写 `DEEPSEEK_API_KEY` 和一段至少 24 字符的 `HOSA_API_TOKEN`，并设置 `HOSA_DEEPSEEK_ENABLED=1`、`HOSA_ALLOWED_ORIGINS=https://james-chenyuhang987.github.io`。部署完成后，将 Vercel 域名加 `/api` 填入网页“翻译设置”。
+
 如果以后确实需要让其他人调用你电脑上的模型，才使用 `cloudflared` 和 `npm run server:share`；这不是 GitHub Pages 的必需步骤。它会启动带访问凭证的分享后端和临时 HTTPS 隧道，模型需先在本机部署，详见[可选的电脑 API 服务器指南](docs/computer-api-server.md)。
 
 ## 质量检查

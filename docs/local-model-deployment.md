@@ -58,6 +58,19 @@ DEEPSEEK_API_KEY=sk-你的密钥
 
 仓库根目录的 `render.yaml` 已提供 Render Blueprint。连接 GitHub 仓库后选择 **New → Blueprint**，Render 会自动读取 Dockerfile 和环境变量；创建时只会要求输入 `DEEPSEEK_API_KEY`，`HOSA_API_TOKEN` 由 Render 自动生成。部署完成后，用服务的 HTTPS 地址加 `/api` 连接前端。
 
+没有信用卡时可使用 Vercel Hobby。仓库中的 `api/health.mjs` 和 `api/translate.mjs` 是 Vercel Node.js Functions，复用同一套 DeepSeek 路由、医疗字面保护和模型结果校验。连接 GitHub 后，在 Vercel 项目环境变量中设置：
+
+```bash
+HOSA_HOST=0.0.0.0
+HOSA_API_TOKEN=一段至少24字符的随机凭证
+HOSA_ALLOWED_ORIGINS=https://james-chenyuhang987.github.io
+HOSA_DEEPSEEK_ENABLED=1
+DEEPSEEK_API_KEY=sk-你的密钥
+HOSA_DEEPSEEK_MODEL=deepseek-chat
+```
+
+Vercel 的环境变量加密保存，密钥不进前端构建产物。部署后连接地址为 `https://你的项目.vercel.app/api`。Hobby 函数有执行时限，DeepSeek 超时会由前端保留本地词库参考。
+
 如果 M5 Max 有足够内存并希望提高粤语整句质量，可把示例配置中的 `hy-mt2-7b` 改为 `enabled: true`，并先执行 `ollama pull hf.co/tencent/Hy-MT2-7B-GGUF:Q4_K_M`。它位于 1.8B 后备路由，加载和响应会更慢；不要同时启用多个大模型，先用医院场景句子逐条核对。
 
 ## 接入本地方言 ASR
