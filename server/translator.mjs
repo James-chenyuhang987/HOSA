@@ -1,7 +1,7 @@
 import OpenCC from 'opencc-js'
-import { hospitalLexicon } from '../src/hospitalLexicon.ts'
+import { hospitalLexicon } from './hospitalLexicon.mjs'
 import { dialects } from './config.mjs'
-import { drugPattern, medicalLiteralRegex, quantityPattern } from '../src/medicalLiterals.ts'
+import { drugPattern, medicalLiteralRegex, quantityPattern } from './medicalLiterals.mjs'
 import { preservesClinicalMeaning } from './translationQuality.mjs'
 
 const toTraditional = OpenCC.Converter({ from: 'cn', to: 'tw' })
