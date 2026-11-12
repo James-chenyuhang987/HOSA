@@ -29,14 +29,19 @@ function authHeaders(connection: BackendConnection) {
   return result
 }
 
-async function responseJson(response: Response) {
+async function responseJson(response: Response, connection?: BackendConnection) {
   let data: unknown
   try { data = await response.json() }
-  catch { throw new Error('后端没有返回可读取的数据，请检查地址与服务状态。') }
+  catch {
+    const remoteHint = connection?.url.startsWith('http')
+      ? '；如果填写的是 GitHub Pages 地址，请改为填写 Vercel 后端地址。'
+      : ''
+    throw new Error(`后端没有返回可读取的数据，请检查地址与服务状态${remoteHint}`)
+  }
   if (!response.ok) {
     const code = data && typeof data === 'object' && 'error' in data ? data.error : ''
     const messages: Record<string, string> = {
-      UNAUTHORIZED: '连接凭证不正确，请检查连接设置。',
+      UNAUTHORIZED: '服务器地址已连接，但缺少或错误的连接凭证。请展开“翻译设置”，填写 HOSA_API_TOKEN。',
       ORIGIN_NOT_ALLOWED: '后端未允许当前页面连接，请检查允许的前端来源。',
       NO_PROVIDER: '这个方言还没有配置可用模型。',
       MODELS_UNAVAILABLE: '模型暂时不可用，已保留词库参考；可先检测连接。',
@@ -70,7 +75,7 @@ export async function requestModelTranslation(
     signal: AbortSignal.any([signal, AbortSignal.timeout(90_000)]),
     credentials: 'omit', cache: 'no-store',
   })
-  const data = await responseJson(response)
+  const data = await responseJson(response, connection)
   if (!data || typeof data !== 'object' || !('text' in data) || typeof data.text !== 'string'
     || !data.text.trim() || data.text.length > 2000 || !('provider' in data)
     || typeof data.provider !== 'string' || !data.provider.trim() || data.provider.length > 80
@@ -97,7 +102,7 @@ export async function requestTranscription(
     signal: AbortSignal.any([signal, AbortSignal.timeout(90_000)]),
     credentials: 'omit', cache: 'no-store',
   })
-  const data = await responseJson(response)
+  const data = await responseJson(response, connection)
   if (!data || typeof data !== 'object' || !('text' in data) || typeof data.text !== 'string'
     || !data.text.trim()) {
     throw new Error('语音服务没有返回可用文字，请重新录音或改用文字输入。')
@@ -114,7 +119,7 @@ export async function checkBackend(connection: BackendConnection, signal: AbortS
     headers: headers(connection), signal: AbortSignal.any([signal, AbortSignal.timeout(probe ? 40_000 : 10_000)]),
     credentials: 'omit', cache: 'no-store',
   })
-  const data = await responseJson(response)
+  const data = await responseJson(response, connection)
   if (!data || typeof data !== 'object' || !('service' in data) || data.service !== 'hosa-translation'
     || !('models' in data) || !Array.isArray(data.models)) {
     throw new Error('这个地址未返回诊途翻译服务，请检查后端地址。')
@@ -133,8 +138,13 @@ export async function checkBackend(connection: BackendConnection, signal: AbortS
   return { models, asr }
 }
 
-export function modelErrorMessage(error: unknown) {
+export function modelErrorMessage(error: unknown, connection?: BackendConnection) {
   if (error instanceof Error && error.name === 'TimeoutError') return '连接超时，已保留词库参考。'
-  if (error instanceof TypeError) return '暂时连不上本地翻译服务，请启动后端并检查连接地址。'
+  if (error instanceof TypeError) {
+    const remote = connection?.url.startsWith('http') && !/127\.0\.0\.1|localhost/iu.test(connection.url)
+    return remote
+      ? '暂时无法连接远程翻译服务器，请检查 Vercel 后端地址、网络和允许来源设置。'
+      : '暂时连不上本地翻译服务，请启动后端并检查连接地址。'
+  }
   return error instanceof Error ? error.message : '模型暂时不可用，已保留词库参考。'
 }

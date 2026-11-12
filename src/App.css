@@ -1156,6 +1156,8 @@ footer {
 }
 .connection-check:disabled { opacity: 0.55; cursor: wait; }
 .connection-message { margin: 3px 0; color: #807c72; font-size: 12px; line-height: 1.7; }
+.connection-hint { color: #807c72; font-size: 11px; line-height: 1.6; }
+.connection-hint code { color: #476967; font-family: var(--sans); }
 .model-list { list-style: none; margin: 0; padding: 0; }
 .model-list li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; font-size: 12px; }
 .model-list small { color: #a07559; }
@@ -1740,6 +1742,9 @@ footer { font-size: 12px; }
 .service-main button, .conversation-history button, .speech-playback button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--paper); color: var(--teal-deep); font: 14px var(--sans); cursor: pointer; }
 .service-main button { flex-shrink: 0; }
 .translation-service p { margin: 6px 0 0; color: var(--muted); font: 13px/1.7 var(--sans); }
+.service-health { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 9px; color: var(--coral-dark); font: 12px/1.65 var(--sans); }
+.service-health button { min-height: 36px; padding: 7px 11px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--teal-deep); background: rgba(255, 255, 255, 0.5); font: inherit; cursor: pointer; }
+.service-health button:hover { background: var(--teal-soft); }
 .conversation-history { margin-top: 14px; padding: 0 18px; border: 1px solid var(--line); border-radius: 12px; background: rgba(248, 244, 236, 0.72); }
 .conversation-history > summary { padding: 15px 0; min-height: 52px; cursor: pointer; font: 15px/1.5 var(--sans); }
 .conversation-history > summary > span { margin-left: 8px; color: var(--muted); font-size: 13px; }

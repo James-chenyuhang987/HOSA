@@ -1614,7 +1614,8 @@ function App() {
           </aside>
         </div>
         <TranslationService enabled={hybrid.enabled} checking={hybrid.checking} checked={Boolean(hybrid.healthMessage)} available={serviceAvailable}
-          disabled={voice.active} onConnect={() => { void hybrid.connect(dialect) }} onDisable={() => hybrid.updateMode(false)} />
+          healthMessage={hybrid.healthMessage} disabled={voice.active} onConnect={() => { void hybrid.connect(dialect) }}
+          onDisable={() => hybrid.updateMode(false)} onOpenSettings={openTranslationSettings} />
         <ConversationHistory turns={turns} onShow={showPastTurn} onEdit={editPastTurn} onClear={endConversation} />
         {conversationNotice && <p className="conversation-notice" role="status">{conversationNotice}</p>}
         <p className="medical-note">翻译用于辅助沟通。药名、剂量和否定语气，请与医护人员再次确认。</p>

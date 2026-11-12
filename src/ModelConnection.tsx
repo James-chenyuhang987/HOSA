@@ -44,9 +44,10 @@ export default function ModelConnection(props: Props) {
         <div className="model-fields">
           <label htmlFor="backend-url">翻译后端地址</label>
           <input id="backend-url" type="text" value={draft.url} disabled={props.disabled}
-            placeholder="http://127.0.0.1:8787/api" spellCheck={false}
+            placeholder="https://hosa-translation-api.vercel.app/api" spellCheck={false}
             onChange={(event) => { setDraft({ ...draft, url: event.target.value }); setSaved(false) }} />
-          <label htmlFor="backend-token">连接凭证（可选）</label>
+          <small className="connection-hint">GitHub Pages 使用 Vercel 后端时，请填写后端地址末尾的 <code>/api</code>。</small>
+          <label htmlFor="backend-token">{draft.url.includes('vercel.app') ? '连接凭证（Vercel 后端必填）' : '连接凭证（可选）'}</label>
           <input id="backend-token" type="password" autoComplete="off" value={draft.token}
             disabled={props.disabled} placeholder="只在当前页面使用"
             onChange={(event) => { setDraft({ ...draft, token: event.target.value }); setSaved(false) }} />

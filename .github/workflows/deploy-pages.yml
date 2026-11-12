@@ -35,6 +35,10 @@ jobs:
         run: npm ci
 
       - name: Build website
+        env:
+          # GitHub Pages is a static host. Keep local development on /api via
+          # Vite's proxy, but point the published build at the deployed API.
+          VITE_TRANSLATION_API_URL: https://hosa-translation-api.vercel.app/api
         run: npm run build
 
       - name: Upload Pages artifact

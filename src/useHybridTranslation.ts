@@ -103,7 +103,7 @@ export function useHybridTranslation(localTranslate: LocalTranslator) {
       }
     } catch (error) {
       if (generation === generationRef.current && !controller.signal.aborted) {
-        setNotice(modelErrorMessage(error))
+        setNotice(modelErrorMessage(error, connection))
         setCanRetry(true)
       }
     } finally {
@@ -158,7 +158,7 @@ export function useHybridTranslation(localTranslate: LocalTranslator) {
         setModels([])
         setAsr({ configured: false })
         setHealthMessage(error instanceof Error && error.name === 'TimeoutError'
-          ? '连接检测超时，请检查服务后重试。' : modelErrorMessage(error).replace('，已保留词库参考。', '。'))
+          ? '连接检测超时，请检查服务后重试。' : modelErrorMessage(error, connection).replace('，已保留词库参考。', '。'))
       }
     } finally {
       if (!controller.signal.aborted) setChecking(false)

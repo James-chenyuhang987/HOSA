@@ -11,7 +11,7 @@
 - **数值信息**：支持“我的体温是38.5℃”“我的血压是125/80mmHg”“我的疼痛评分是7分”等第一人称记录，输出以“体温／血压／疼痛评分”单独列出，数字和单位原样保留并可切回普通话。不换算、不四舍五入、不判断异常；不支持缺少主体、混入其他分句或不完整单位的写法。
 - **内容保真**：简繁体短句可等价匹配；语音识别常见的逐字空格、全角标点和带分隔符的句首“嗯／那个”等口头填充会在匹配时轻量归一，不改写句中医学词语。“那个药”等实词保留，换行作为分句边界。组合翻译按完整短句或明确医院句式匹配，支持方言短句内部自带逗号，只有全部内容被覆盖时才组合，不会跳过未知内容。保留问句意图，不把“不舒服”擅自改成“有点”或“很不舒服”；减少机械添加的四川话语气词，保留医保等制度名称，不按方言自动替换为其他地区制度。
 - **离线优先翻译**：医院词库和高频症状、病史、检查、用药表达直接在浏览器运行，常用短句不需要你的电脑当服务器。未覆盖的整句仍可选择接入任意兼容服务；已加入 Hy-MT2、MiLMMT、Taigi、通用模型和 DeepSeek Chat 适配，默认关闭。DeepSeek 通过后端调用，API Key 不进入浏览器。
-- **一键整句翻译**：后端配置好后，用户点击“一键开启”即可检测服务并启用当前方言，无需填写地址或凭证。检测只请求健康状态，开启后才会发送输入文字；连接失败或当前方言没有可用模型时继续保留词库结果。其他后端地址和访问凭证仍可在折叠的“翻译设置”里配置。
+- **一键整句翻译**：后端配置好后，用户点击“一键开启”即可检测服务并启用当前方言。GitHub Pages 默认指向项目的 Vercel API；公网后端启用了 `HOSA_API_TOKEN` 时，首次使用需要在“翻译设置”填写该连接凭证（凭证只保存在当前页面）。检测只请求健康状态，开启后才会发送输入文字；连接失败或当前方言没有可用模型时继续保留词库结果。其他后端地址和访问凭证仍可在折叠的“翻译设置”里配置。
 - **语音输入翻译**：点击输入框旁的麦克风，用普通话或当前方言录入一句话，识别文字会自动进入翻译结果。默认使用浏览器 `SpeechRecognition`；也可以在“翻译设置”中启用 MediaRecorder + 本地 ASR。
 - **手机现场沟通**：输入停顿 800ms 后自动翻译，中文输入法组词时不触发；麦克风和立即翻译集中在输入框下方。点击“查看译文”可定位结果；“立即翻译”及 Ctrl/Cmd + Enter 会立即提交并定位结果，自动翻译保留输入焦点。编辑时保留上一条结果并标明过期，确认新结果后才能复制或放大展示。
 - **译文展示与短句选择**：放大展示同时显示原文和译文，可调节字号、按 Escape 关闭并恢复焦点；展示内容固定为打开时的结果，避免模型补译打断阅读，关闭后再次打开可查看新结果。读法与沟通提示按需展开，缺少读法时省略读法区域。医院短句支持八类场景、“全部”及关键词搜索，可查普通话、已收录的同义问法和当前方言，点击后立即翻译并定位结果。
@@ -104,7 +104,7 @@ DEEPSEEK_API_KEY=sk-你的密钥
 
 仓库还提供了 [Render Blueprint](render.yaml)。在 Render 中选择 **New → Blueprint** 并连接这个 GitHub 仓库，Render 会读取该文件创建后端；创建时只需要填写 `DEEPSEEK_API_KEY`，`HOSA_API_TOKEN` 会自动生成。Render 部署完成后，把它提供的 HTTPS 地址加上 `/api` 填回网页设置。
 
-如果没有信用卡，使用 Vercel Hobby 部署更合适。仓库已经提供 `api/health.mjs`、`api/translate.mjs` 和 `vercel.json`，连接 GitHub 仓库后会自动创建两个 API 函数。部署时在 Vercel 环境变量中填写 `DEEPSEEK_API_KEY` 和一段至少 24 字符的 `HOSA_API_TOKEN`，并设置 `HOSA_DEEPSEEK_ENABLED=1`、`HOSA_ALLOWED_ORIGINS=https://james-chenyuhang987.github.io`。部署完成后，将 Vercel 域名加 `/api` 填入网页“翻译设置”。
+如果没有信用卡，使用 Vercel Hobby 部署更合适。仓库已经提供 `api/health.mjs`、`api/translate.mjs` 和 `vercel.json`，连接 GitHub 仓库后会自动创建两个 API 函数。部署时在 Vercel 环境变量中填写 `DEEPSEEK_API_KEY` 和一段至少 24 字符的 `HOSA_API_TOKEN`，并设置 `HOSA_DEEPSEEK_ENABLED=1`、`HOSA_ALLOWED_ORIGINS=https://james-chenyuhang987.github.io`。部署完成后，GitHub Pages 的生产构建会自动使用 `https://hosa-translation-api.vercel.app/api`；如果你的 Vercel 域名不同，请修改 `.github/workflows/deploy-pages.yml` 中的 `VITE_TRANSLATION_API_URL`，或在网页“翻译设置”中手动填写新的 Vercel 域名加 `/api`。页面提示“服务器地址已连接，但缺少或错误的连接凭证”时，填写 Vercel 中对应的 `HOSA_API_TOKEN`；不要把它写入 GitHub、`VITE_*` 环境变量或网页代码。
 
 如果以后确实需要让其他人调用你电脑上的模型，才使用 `cloudflared` 和 `npm run server:share`；这不是 GitHub Pages 的必需步骤。它会启动带访问凭证的分享后端和临时 HTTPS 隧道，模型需先在本机部署，详见[可选的电脑 API 服务器指南](docs/computer-api-server.md)。
 
