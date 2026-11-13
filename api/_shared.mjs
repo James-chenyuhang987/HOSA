@@ -6,6 +6,21 @@ const authFailures = new Map()
 const requestWindows = new Map()
 const WINDOW_MS = 60_000
 const AUTH_FAILURE_LIMIT = 10
+const MAX_TRACKED_KEYS = 2048
+
+function remember(map, key, value) {
+  if (!map.has(key) && map.size >= MAX_TRACKED_KEYS) {
+    const oldest = map.keys().next().value
+    if (oldest !== undefined) map.delete(oldest)
+  }
+  map.set(key, value)
+}
+
+function sourceKey(req) {
+  const forwarded = req.headers?.['x-forwarded-for']
+  const firstForwarded = Array.isArray(forwarded) ? forwarded[0] : String(forwarded || '').split(',')[0].trim()
+  return firstForwarded || String(req.socket?.remoteAddress || 'unknown')
+}
 
 export function getConfig() {
   configPromise ||= loadConfig({
@@ -50,12 +65,12 @@ export function corsAndAuth(req, res, config) {
     createHash('sha256').update(`Bearer ${expected}`).digest(),
   ))
   if (!matches) {
-    const key = String(req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown')
+    const key = sourceKey(req)
     const now = Date.now()
     const previous = authFailures.get(key)
     const window = previous && now - previous.started < WINDOW_MS ? previous : { started: now, count: 0 }
     window.count += 1
-    authFailures.set(key, window)
+    remember(authFailures, key, window)
     for (const [address, entry] of authFailures) if (now - entry.started >= WINDOW_MS) authFailures.delete(address)
     if (window.count > AUTH_FAILURE_LIMIT) {
       res.setHeader('Retry-After', '60')
@@ -65,13 +80,13 @@ export function corsAndAuth(req, res, config) {
     sendJson(res, 401, { error: 'UNAUTHORIZED' })
     return false
   }
-  authFailures.delete(String(req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown'))
+  authFailures.delete(sourceKey(req))
   const now = Date.now()
   const requestKey = `token:${createHash('sha256').update(received).digest('hex')}`
   const previous = requestWindows.get(requestKey)
   const window = previous && now - previous.started < WINDOW_MS ? previous : { started: now, count: 0 }
   window.count += 1
-  requestWindows.set(requestKey, window)
+  remember(requestWindows, requestKey, window)
   for (const [key, entry] of requestWindows) if (now - entry.started >= WINDOW_MS) requestWindows.delete(key)
   if (window.count > (config.rateLimitPerMinute || 30)) {
     res.setHeader('Retry-After', '60')
