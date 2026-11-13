@@ -108,6 +108,8 @@ DEEPSEEK_API_KEY=sk-你的密钥
 
 如果没有信用卡，使用 Vercel Hobby 部署更合适。仓库已经提供 `api/health.mjs`、`api/translate.mjs` 和 `vercel.json`，连接 GitHub 仓库后会自动创建两个 API 函数。部署时在 Vercel 环境变量中填写 `DEEPSEEK_API_KEY` 和一段至少 24 字符的 `HOSA_API_TOKEN`，并设置 `HOSA_DEEPSEEK_ENABLED=1`、`HOSA_ALLOWED_ORIGINS=https://james-chenyuhang987.github.io`。部署完成后，GitHub Pages 的生产构建会自动使用 `https://hosa-translation-api.vercel.app/api`；如果你的 Vercel 域名不同，请修改 `.github/workflows/deploy-pages.yml` 中的 `VITE_TRANSLATION_API_URL`，或在网页“翻译设置”中手动填写新的 Vercel 域名加 `/api`。页面提示“服务器地址已连接，但缺少或错误的连接凭证”时，填写 Vercel 中对应的 `HOSA_API_TOKEN`；不要把它写入 GitHub、`VITE_*` 环境变量或网页代码。
 
+同一个 Vercel 项目也会构建前端备用入口：`https://你的项目.vercel.app/HOSA/`。如果 GitHub Pages 因网络、代理或地区线路出现 `ERR_CONNECTION_CLOSED`，可暂时使用这个地址；它与 GitHub Pages 使用同一套前端代码和 `/api` 后端。GitHub Pages Actions 仍会继续发布主站。
+
 如果以后确实需要让其他人调用你电脑上的模型，才使用 `cloudflared` 和 `npm run server:share`；这不是 GitHub Pages 的必需步骤。它会启动带访问凭证的分享后端和临时 HTTPS 隧道，模型需先在本机部署，详见[可选的电脑 API 服务器指南](docs/computer-api-server.md)。
 
 ## 质量检查

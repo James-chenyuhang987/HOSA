@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/HOSA", "destination": "/" },
+    { "source": "/HOSA/(.*)", "destination": "/$1" }
+  ],
   "functions": {
     "api/*.mjs": {
       "maxDuration": 60
