@@ -1158,6 +1158,9 @@ footer {
 .connection-message { margin: 3px 0; color: #807c72; font-size: 12px; line-height: 1.7; }
 .connection-hint { color: #807c72; font-size: 11px; line-height: 1.6; }
 .connection-hint code { color: #476967; font-family: var(--sans); }
+.token-safety-note { margin: 0; color: #807c72; font: 11px/1.65 var(--sans); }
+.security-confirm { display: flex; align-items: flex-start; gap: 8px; color: #8c5d4d; font: 12px/1.65 var(--sans); }
+.security-confirm input { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 2px; accent-color: var(--teal); }
 .model-list { list-style: none; margin: 0; padding: 0; }
 .model-list li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; font-size: 12px; }
 .model-list small { color: #a07559; }

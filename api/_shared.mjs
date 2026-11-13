@@ -2,6 +2,10 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { loadConfig } from '../server/config.mjs'
 
 let configPromise
+const authFailures = new Map()
+const requestWindows = new Map()
+const WINDOW_MS = 60_000
+const AUTH_FAILURE_LIMIT = 10
 
 export function getConfig() {
   configPromise ||= loadConfig({
@@ -16,6 +20,7 @@ export function setSecurityHeaders(res, origin) {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Frame-Options', 'DENY')
   res.setHeader('Referrer-Policy', 'no-referrer')
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
   res.setHeader('Cache-Control', 'no-store')
   res.setHeader('Vary', 'Origin')
   if (origin) res.setHeader('Access-Control-Allow-Origin', origin)
@@ -25,8 +30,7 @@ export function corsAndAuth(req, res, config) {
   const origin = typeof req.headers.origin === 'string' ? req.headers.origin : ''
   setSecurityHeaders(res, origin && config.allowedOrigins.includes(origin) ? origin : undefined)
   if (origin && !config.allowedOrigins.includes(origin)) {
-    res.statusCode = 403
-    res.end(JSON.stringify({ error: 'ORIGIN_NOT_ALLOWED' }))
+    sendJson(res, 403, { error: 'ORIGIN_NOT_ALLOWED' })
     return false
   }
   if (req.method === 'OPTIONS') {
@@ -41,13 +45,37 @@ export function corsAndAuth(req, res, config) {
   }
   const expected = config.token || ''
   const received = typeof req.headers.authorization === 'string' ? req.headers.authorization : ''
-  const matches = expected && timingSafeEqual(
+  const matches = Boolean(expected && timingSafeEqual(
     createHash('sha256').update(received).digest(),
     createHash('sha256').update(`Bearer ${expected}`).digest(),
-  )
+  ))
   if (!matches) {
-    res.statusCode = 401
-    res.end(JSON.stringify({ error: 'UNAUTHORIZED' }))
+    const key = String(req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown')
+    const now = Date.now()
+    const previous = authFailures.get(key)
+    const window = previous && now - previous.started < WINDOW_MS ? previous : { started: now, count: 0 }
+    window.count += 1
+    authFailures.set(key, window)
+    for (const [address, entry] of authFailures) if (now - entry.started >= WINDOW_MS) authFailures.delete(address)
+    if (window.count > AUTH_FAILURE_LIMIT) {
+      res.setHeader('Retry-After', '60')
+      sendJson(res, 429, { error: 'AUTH_RATE_LIMITED' })
+      return false
+    }
+    sendJson(res, 401, { error: 'UNAUTHORIZED' })
+    return false
+  }
+  authFailures.delete(String(req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown'))
+  const now = Date.now()
+  const requestKey = `token:${createHash('sha256').update(received).digest('hex')}`
+  const previous = requestWindows.get(requestKey)
+  const window = previous && now - previous.started < WINDOW_MS ? previous : { started: now, count: 0 }
+  window.count += 1
+  requestWindows.set(requestKey, window)
+  for (const [key, entry] of requestWindows) if (now - entry.started >= WINDOW_MS) requestWindows.delete(key)
+  if (window.count > (config.rateLimitPerMinute || 30)) {
+    res.setHeader('Retry-After', '60')
+    sendJson(res, 429, { error: 'RATE_LIMITED' })
     return false
   }
   return true

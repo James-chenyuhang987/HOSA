@@ -2,8 +2,58 @@ import type { BackendConnection, BackendHealth, ModelHealth, Translation, Transl
 
 export const defaultBackendUrl = import.meta.env.VITE_TRANSLATION_API_URL || '/api'
 
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
+const SAFE_CONNECTION_TOKEN = /^[\x21-\x7e]{24,256}$/u
+
+function parsedBackendUrl(base: string) {
+  try { return new URL(base) }
+  catch { return null }
+}
+
+export function isRemoteBackendUrl(base: string) {
+  const url = parsedBackendUrl(base.trim())
+  return Boolean(url && ['http:', 'https:'].includes(url.protocol) && !LOOPBACK_HOSTS.has(url.hostname))
+}
+
+export function isKnownBackendUrl(base: string) {
+  const value = base.trim().replace(/\/+$/u, '')
+  if (/^\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+$/iu.test(value)) return true
+  const url = parsedBackendUrl(value)
+  if (!url || url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) return false
+  return url.hostname === 'hosa-translation-api.vercel.app' && url.pathname === '/api'
+}
+
+/**
+ * Validate a connection before a bearer token can leave the page. Remote HTTP
+ * endpoints are blocked because a network observer could read the token. A
+ * custom HTTPS endpoint remains possible, but the settings UI asks the user to
+ * explicitly confirm that they own it.
+ */
+export function validateBackendConnection(connection: BackendConnection) {
+  const value = connection.url.trim()
+  if (!value) return '请填写翻译后端地址。'
+  const relative = /^\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+$/iu.test(value)
+  const url = parsedBackendUrl(value)
+  if (!relative && (!url || !['http:', 'https:'].includes(url.protocol)
+    || Boolean(url.username || url.password || url.search || url.hash))) {
+    return '后端地址只能使用 http/https，不能包含账号、密码、查询参数或片段。'
+  }
+  if (url && url.protocol === 'http:' && !LOOPBACK_HOSTS.has(url.hostname)) {
+    return '为保护连接凭证，远程后端必须使用 HTTPS；HTTP 只允许本机地址。'
+  }
+  if (connection.token.trim().startsWith('sk-')) {
+    return '这个凭证看起来是 DeepSeek API Key。请只填写后端的 HOSA_API_TOKEN，不要把模型密钥交给网页。'
+  }
+  if (connection.token && isRemoteBackendUrl(value) && !SAFE_CONNECTION_TOKEN.test(connection.token)) {
+    return '远程 HOSA_API_TOKEN 需要 24–256 个可打印字符，请检查凭证后再保存。'
+  }
+  return ''
+}
+
 function apiUrl(base: string, path: string) {
   const value = base.trim().replace(/\/+$/u, '')
+  const safetyMessage = validateBackendConnection({ url: value, token: '' })
+  if (safetyMessage) throw new Error(safetyMessage)
   if (/^\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+$/iu.test(value)) return `${value}/${path}`
   try {
     const url = new URL(value)
@@ -70,10 +120,12 @@ export async function requestModelTranslation(
   connection: BackendConnection,
   signal: AbortSignal,
 ): Promise<Translation> {
+  const safetyMessage = validateBackendConnection(connection)
+  if (safetyMessage) throw new Error(safetyMessage)
   const response = await fetch(apiUrl(connection.url, 'translate'), {
     method: 'POST', headers: headers(connection), body: JSON.stringify(input),
     signal: AbortSignal.any([signal, AbortSignal.timeout(90_000)]),
-    credentials: 'omit', cache: 'no-store',
+    credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer',
   })
   const data = await responseJson(response, connection)
   if (!data || typeof data !== 'object' || !('text' in data) || typeof data.text !== 'string'
@@ -95,12 +147,14 @@ export async function requestTranscription(
   connection: BackendConnection,
   signal: AbortSignal,
 ): Promise<{ text: string; provider?: string }> {
+  const safetyMessage = validateBackendConnection(connection)
+  if (safetyMessage) throw new Error(safetyMessage)
   const body = new FormData()
   body.append('file', blob, `hosa-recording.${blob.type.includes('mp4') ? 'mp4' : 'webm'}`)
   const response = await fetch(apiUrl(connection.url, 'transcribe'), {
     method: 'POST', headers: authHeaders(connection), body,
     signal: AbortSignal.any([signal, AbortSignal.timeout(90_000)]),
-    credentials: 'omit', cache: 'no-store',
+    credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer',
   })
   const data = await responseJson(response, connection)
   if (!data || typeof data !== 'object' || !('text' in data) || typeof data.text !== 'string'
@@ -115,9 +169,11 @@ export async function requestTranscription(
 }
 
 export async function checkBackend(connection: BackendConnection, signal: AbortSignal, probe = false): Promise<BackendHealth> {
+  const safetyMessage = validateBackendConnection(connection)
+  if (safetyMessage) throw new Error(safetyMessage)
   const response = await fetch(`${apiUrl(connection.url, 'health')}${probe ? '?probe=1' : ''}`, {
     headers: headers(connection), signal: AbortSignal.any([signal, AbortSignal.timeout(probe ? 40_000 : 10_000)]),
-    credentials: 'omit', cache: 'no-store',
+    credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer',
   })
   const data = await responseJson(response, connection)
   if (!data || typeof data !== 'object' || !('service' in data) || data.service !== 'hosa-translation'

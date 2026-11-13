@@ -304,3 +304,17 @@ it('does not discard the result while editing connection settings, and only appl
   expect(screen.getByText(firstResult)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '复制译文' })).toBeDisabled()
 })
+
+it('requires explicit trust before sending a token to a custom remote backend', () => {
+  render(<App />)
+  settings()
+  fireEvent.click(screen.getByText('连接设置'))
+  fireEvent.change(screen.getByLabelText('翻译后端地址'), { target: { value: 'https://example.test/api' } })
+  fireEvent.change(screen.getByLabelText('连接凭证（可选）'), { target: { value: 'a'.repeat(32) } })
+  fireEvent.click(screen.getByRole('button', { name: '保存并应用' }))
+  expect(screen.getByText(/自定义远程地址/u)).toBeInTheDocument()
+  expect(screen.getByRole('checkbox', { name: /我确认这是我控制的 HTTPS 后端/u })).not.toBeChecked()
+  fireEvent.click(screen.getByRole('checkbox', { name: /我确认这是我控制的 HTTPS 后端/u }))
+  fireEvent.click(screen.getByRole('button', { name: '保存并应用' }))
+  expect(screen.getByText('已应用，仅在当前页面使用。')).toBeInTheDocument()
+})
