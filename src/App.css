@@ -45,6 +45,16 @@ button {
   flex-direction: column;
 }
 
+.medical-disclaimer {
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(169, 73, 50, 0.2);
+  color: var(--coral-dark);
+  background: var(--coral-soft);
+  font: 600 14px/1.6 var(--sans);
+  text-align: center;
+}
+
 main {
   flex: 1;
 }

@@ -1478,6 +1478,7 @@ function App() {
   const voiceTime = `${String(Math.floor(voice.seconds / 60)).padStart(2, '0')}:${String(voice.seconds % 60).padStart(2, '0')}`
 
   return <div className="app-shell">
+    <p className="medical-disclaimer" role="note" aria-label="医疗使用提示">本工具仅沟通辅助，绝对不能替代医生诊断</p>
     <header className="topbar">
       <button className="brand" type="button" onClick={() => setActiveModule('translate')}>
         <span className="brand-mark" aria-hidden="true">文</span><span><strong>诊途</strong><small>让沟通少走弯路</small></span>
